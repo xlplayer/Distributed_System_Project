@@ -4,6 +4,7 @@
 #include <memory>
 using std::shared_ptr;
 
+class Channel;
 class Epoll;
 class EventLoopThreadPool;
 
@@ -12,6 +13,7 @@ class Acceptor
     public:
         Acceptor(int port, int threadsNum);
         ~Acceptor();
+        void handleConnect();
         void loop();
     
     private:

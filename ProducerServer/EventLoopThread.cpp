@@ -1,10 +1,11 @@
 #include "EventLoopThread.h"
 #include "EventLoop.h"
 #include "Thread.h"
+using std::bind;
 
 EventLoopThread::EventLoopThread()
 :_eventLoop(new EventLoop())
-,_thread(new Thread(std::bind(&EventLoopThread::threadFunc,this)))
+,_thread(new Thread(bind(&EventLoopThread::threadFunc,this)))
 {}
 
 EventLoopThread::~EventLoopThread()

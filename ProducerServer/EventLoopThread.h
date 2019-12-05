@@ -17,9 +17,7 @@ class EventLoopThread
         EventLoopThread();
         ~EventLoopThread();
         void startLoop();
-        shared_ptr<EventLoop> getEventLoop(){
-            return _eventLoop;
-        }
+        shared_ptr<EventLoop> getEventLoop(){ return _eventLoop; }
 
     private:
         void threadFunc();

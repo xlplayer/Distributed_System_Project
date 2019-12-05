@@ -3,6 +3,7 @@
 #include "EventLoop.h"
 #include "Epoll.h"
 #include "Acceptor.h"
+#include "Thread.h"
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -10,18 +11,12 @@
 #include <unistd.h>
 #include <memory>
 #include <vector>
+#include <queue>
+#include "MessageQueue.h"
 using std::shared_ptr;
+using std::queue;
 
-vector<sockaddr_in> queueServerAddr;
-void initQueueServerAddr(vector<sockaddr_in> &queueServerAddr)
-{
-    struct sockaddr_in servaddr;
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(50000);
-    inet_pton(AF_INET, "127.0.0.1", &servaddr.sin_addr);
-    queueServerAddr.push_back(servaddr);
-}
+MessageQueue msgQueue;
 
 int main(int argc, char **argv)
 {
@@ -48,7 +43,9 @@ int main(int argc, char **argv)
         }
     }
 
-    initQueueServerAddr(queueServerAddr);
+    shared_ptr<MessageProducer> msgProducer(new MessageProducer());
+    shared_ptr<Thread> msgThread(new Thread(bind(&MessageProducer::loop,msgProducer)));
+    msgThread->start();
     shared_ptr<Acceptor> acceptor(new Acceptor(port, threadsNum));
     acceptor->loop();
 }

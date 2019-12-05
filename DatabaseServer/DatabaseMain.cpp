@@ -19,8 +19,7 @@ using std::queue;
 using std::string;
 
 const int LISTENQ = 5;
-const int BUFFSIZE = 1024;
-char buf[BUFFSIZE];
+char buf[1024];
 queue<string> MQ;
 const int MAXQUEUESIZE = 102400;
 
@@ -77,7 +76,7 @@ int main(int argc, char **argv)
 
 void handle_read(shared_ptr<Epoll> _epoll, int fd)
 {
-    int nread = read(fd, buf, BUFFSIZE);
+    int nread = read(fd, buf, 1024);
     if(nread == -1)
     {
         perror("read error");

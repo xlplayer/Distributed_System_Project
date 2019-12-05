@@ -3,30 +3,42 @@
 
 #include <memory>
 #include <string>
+#include <functional>
+#include "MutexLock.h"
 #include "MessageProducer.h"
 using std::shared_ptr;
 using std::string;
+using std::function;
+using std::enable_shared_from_this;
 
 class Epoll;
-const int BUFFSIZE = 1024;
+class Channel;
 
-class EventLoop
+class EventLoop: public enable_shared_from_this<EventLoop>
 {
     public:
         EventLoop();
         ~EventLoop();
-        void handle_read(int fd);
-        void hadnle_accept(int fd);
+        void handlewakeup();
+        void handleConnect();
         void loop();
-        void addToEpoll(int fd);
+        string getListenip() { return _listen_ip; }
+        int getListenport() { return _listen_port; }
+        shared_ptr<Epoll> getEpoll(){ return _epoll; }
+        void addPendingFunctions(function<void()> &&cb);
+        void doPendingFunctions();
+        void wakeup();
    
     private:
+        int _wakeupfd;
+        shared_ptr<Channel> _wakeupChannel;
         shared_ptr<Epoll> _epoll;
-        char _buf[BUFFSIZE];
-        shared_ptr<MessageProducer> _messageProducer;
+        shared_ptr<Channel> _acceptChannel;
         int _listenfd;
         string _listen_ip;
         int _listen_port;
+        vector<function<void()>> _pendingFunctions;
+        MutexLock _mutex;
 };
 
 #endif

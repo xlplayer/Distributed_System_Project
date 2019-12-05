@@ -13,13 +13,15 @@ class MessageProducer
     public:
         MessageProducer();
         ~MessageProducer();
-        string push(string &ip, int port, int fd, string &msg);
+        void initQueueServerAddr();
+        void loop();
 
     private:
         int _sockfd;
         int _listenfd;
         string _listen_ip;
         int _listen_port;
+        vector<sockaddr_in> _queueServerAddr;
 };
 
 #endif

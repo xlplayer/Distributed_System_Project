@@ -1,120 +1,105 @@
 #include "EventLoop.h"
 #include "Epoll.h"
-#include "../rapidjson/stringbuffer.h"
-#include "../rapidjson/document.h"
-#include "../rapidjson/writer.h"
+#include "Channel.h"
+#include "Socket.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <sys/eventfd.h>
 #include <iostream>
 using namespace std;
-using namespace rapidjson;
+using std::bind;
 
 extern int socket_bind(int port);
 
 EventLoop::EventLoop()
-:_epoll(new Epoll())
-,_messageProducer(new MessageProducer())
+:_wakeupfd(eventfd(0, EFD_NONBLOCK|EFD_CLOEXEC))
+,_listenfd(socket_bind(0))
+,_epoll(new Epoll())
+,_mutex()
 {
-    _listenfd = socket_bind(0);
-    listen(_listenfd, 100);
-    _epoll->add_event(_listenfd, EPOLLIN);
+    if(listen(_listenfd, 100) < 0)
+        perror("listen failed.");
+    setSocketNonBlocking(_listenfd);
+}
+
+EventLoop::~EventLoop()
+{
+    close(_listenfd);
+    close(_wakeupfd);
+}
+
+void EventLoop::handleConnect()
+{
+    int clientfd;
+    struct sockaddr_in clientaddr;
+    socklen_t clientaddr_len = sizeof(clientaddr);
+    while( (clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len)) > 0)
+    {
+        printf("<new connection from %s:%d\n",inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+
+        setSocketNonBlocking(clientfd);
+        shared_ptr<Channel> channel(new Channel(shared_from_this(), clientfd));
+        channel->setEvents(EPOLLIN);
+        _epoll->add_channel(channel);
+
+        //addPendingFunctions(bind(&Epoll::add_channel, _epoll, channel));
+    }
+}
+
+void EventLoop::loop()
+{
+    _wakeupChannel = make_shared<Channel>(shared_from_this(),_wakeupfd);
+    _wakeupChannel->setEvents(EPOLLIN);
+    _wakeupChannel->setReadHandler(bind(&EventLoop::handlewakeup, this));
+    _epoll->add_channel(_wakeupChannel);
+
+    _acceptChannel = make_shared<Channel>(shared_from_this(),_listenfd);
+    _acceptChannel->setEvents(EPOLLIN);
+    _acceptChannel->setReadHandler(bind(&EventLoop::handleConnect, this));
+    _epoll->add_channel(_acceptChannel);
 
     struct sockaddr_in listenaddr;
     socklen_t listenaddr_len = sizeof(listenaddr);
     getsockname(_listenfd, (struct sockaddr *)&listenaddr, &listenaddr_len);
     _listen_ip = inet_ntoa(listenaddr.sin_addr);
     _listen_port = ntohs(listenaddr.sin_port);
-}
-
-EventLoop::~EventLoop()
-{}
-
-void EventLoop::handle_read(int fd)
-{
-    int nread = read(fd, _buf, BUFFSIZE);
-    if(nread == -1)
-    {
-        perror("read error");
-        close(fd);
-        _epoll->del_event(fd, EPOLLIN);
-    }
-    else if(nread == 0)
-    {
-        fprintf(stderr,"client close.\n");
-        close(fd);
-        _epoll->del_event(fd, EPOLLIN);
-    }
-    else
-    {
-        printf("read message: ");
-        for(int i=0;i<nread;i++) putchar(_buf[i]);
-        printf("\n");
-    
-        StringBuffer s;
-        Writer<StringBuffer> writer(s);
-        Document d;
-        d.Parse(string(_buf,_buf+nread).c_str());
-        string operate = d["operate"].GetString();
-        if(operate == "reply")
-        {
-            int request_fd = d["fd"].GetInt();
-            write(request_fd, _buf, nread);
-        }
-
-        else
-        {
-            string msg = string(_buf, _buf+nread);
-            
-            msg = _messageProducer->push(_listen_ip, _listen_port, fd, msg);
-            if(msg == "push success")
-            {
-                //write(fd, "waiting result...", 17);
-            }
-            else if(msg == "push failure")
-            {
-                s.Clear();
-                writer.StartObject();
-                writer.Key("result");writer.String("failure");
-                writer.EndObject();
-                write(fd, s.GetString(), s.GetSize());
-            }
-        }            
-    }    
-}
-
-void EventLoop::hadnle_accept(int listenfd)
-{
-    int clientfd;
-    struct sockaddr_in clientaddr;
-    socklen_t clientaddr_len = sizeof(clientaddr);
-    clientfd = accept(listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len);
-    if(clientfd == -1)
-    {
-        perror("accept error");
-        exit(1);
-    }
-    _epoll->add_event(clientfd, EPOLLIN);
-}
-
-void EventLoop::loop()
-{
     while(1)
     {
-        _epoll->wait_event();
-        for(int i = 0; i < _epoll->_eventNum; i++)
-        {
-            int fd = _epoll->_events[i].data.fd;
-            if(fd == _listenfd && _epoll->_events[i].events & EPOLLIN)
-                hadnle_accept(_listenfd);
-            else if(_epoll->_events[i].events & EPOLLIN)
-                handle_read(fd);
-        }
+        _epoll->handle_activate_channels();
+        doPendingFunctions();
     }
 }
 
-void EventLoop::addToEpoll(int fd){
-    _epoll->add_event(fd, EPOLLIN);
+void EventLoop::addPendingFunctions(function<void()> &&cb)
+{
+    MutexLockGuard lcok(_mutex);
+    _pendingFunctions.push_back(cb);
+}
+
+void EventLoop::doPendingFunctions()
+{
+    vector<function<void()> >functions;
+    {
+        MutexLockGuard lock(_mutex);
+        functions.swap(_pendingFunctions);
+    }
+    for(size_t i =0; i<functions.size();i++)
+        functions[i]();
+}
+
+void EventLoop::wakeup()
+{
+    uint64_t one = 1;
+    ssize_t n = writen(_wakeupfd, &one, sizeof(one));
+}
+
+void EventLoop::handlewakeup()
+{
+    string msg;
+    bool zero;
+    int n = readn(_wakeupfd, msg, zero);
+    printf("wakeupmsg:%s\n", msg.c_str());
 }

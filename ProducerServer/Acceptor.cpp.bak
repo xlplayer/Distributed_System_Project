@@ -19,6 +19,11 @@ Acceptor::Acceptor(int port, int threadsNum)
 ,_eventLoopThreadPool(new EventLoopThreadPool(threadsNum))
 {
     listen(_listenfd, LISTENQ);
+    _acceptChannel = make_shared<Channel>(_listenfd);
+    _acceptChannel->setEvents(EPOLLIN);
+    _acceptChannel->setReadHandler(bind(&Acceptor::handleConnect, this));
+    _epoll->add_channel(_acceptChannel);
+
     _eventLoopThreadPool->start();
 }
 
@@ -29,12 +34,20 @@ Acceptor::~Acceptor()
 
 void Acceptor::loop()
 {
+    while(1)
+    {
+        _epoll->handle_activate_channels();
+    }
+}
+
+
+void Acceptor::handleConnect()
+{
     int clientfd;
     struct sockaddr_in clientaddr;
     socklen_t clientaddr_len = sizeof(clientaddr);
-    while(1)
+    clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len));
     {
-        clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len);
         printf("new connection from %s:%d\n",inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
         shared_ptr<EventLoopThread> thread = _eventLoopThreadPool->getNextEventLoopThread();
         shared_ptr<EventLoop> loop = thread->getEventLoop();
@@ -43,8 +56,7 @@ void Acceptor::loop()
         setSocketNonBlocking(clientfd);
         shared_ptr<Channel> channel(new Channel(loop, clientfd));
         channel->setEvents(EPOLLIN);
-        loop->addPendingFunctions(bind(&Epoll::add_channel, epoll, channel));
-        loop->wakeup();
-        //epoll->add_channel(channel);
+        epoll->add_channel(channel);
     }
+
 }

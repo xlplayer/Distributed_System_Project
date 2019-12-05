@@ -8,7 +8,7 @@ using std::function;
 class Thread
 {
     public:
-        Thread(function<void()> cb);
+        Thread(function<void()> &&cb);
         ~Thread();
         void start();
         void join();

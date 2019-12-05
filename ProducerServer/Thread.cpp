@@ -1,6 +1,6 @@
 #include "Thread.h"
 
-Thread::Thread(function<void()> cb)
+Thread::Thread(function<void()> &&cb)
 :_isRunning(false)
 ,_tid(0)
 ,_cb(cb)

@@ -12,6 +12,7 @@ class MutexLock
         }
         ~MutexLock()
         {
+            pthread_mutex_lock(&_mutex);
             pthread_mutex_destroy(&_mutex);
         }
         void lock()
@@ -22,7 +23,11 @@ class MutexLock
         {
             pthread_mutex_unlock(&_mutex);
         }
-    
+        pthread_mutex_t* get()
+        {
+            return &_mutex;
+        }
+        
     private:
         pthread_mutex_t _mutex;
 };

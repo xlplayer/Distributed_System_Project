@@ -40,6 +40,7 @@ int main(int argc, char **argv)
             string ip = d["ip"].GetString();
             int port = d["port"].GetInt();
             int fd = d["fd"].GetInt();
+            string time = d["time"].GetString();
             string message = d["message"].GetString();
             d.Parse(message.c_str());
             string operate = d["operate"].GetString();
@@ -61,13 +62,15 @@ int main(int argc, char **argv)
                 servaddr.sin_family = AF_INET;
                 servaddr.sin_port = htons(port);
                 inet_pton(AF_INET, ip.c_str(), &servaddr.sin_addr);
-                connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
-
+                if(connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) <0 )
+                    perror("connect error");
                 StringBuffer s;
                 Writer<StringBuffer> writer(s);
                 writer.StartObject();
                 writer.Key("operate");
                 writer.String("reply");
+                writer.Key("time");
+                writer.String(time.c_str());
                 writer.Key("fd");
                 writer.Int(fd);
                 writer.Key("result");
@@ -77,7 +80,7 @@ int main(int argc, char **argv)
                 writer.EndArray();
                 writer.EndObject();
                 write(sockfd, s.GetString(), s.GetSize());
-
+                cout<<s.GetString()<<endl;
                 close(sockfd);
 
             }
@@ -106,6 +109,8 @@ int main(int argc, char **argv)
                 writer.StartObject();
                 writer.Key("operate");
                 writer.String("reply");
+                writer.Key("time");
+                writer.String(time.c_str());
                 writer.Key("fd");
                 writer.Int(fd);
                 writer.Key("result");
