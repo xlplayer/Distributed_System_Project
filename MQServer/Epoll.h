@@ -3,9 +3,14 @@
 
 #include <sys/epoll.h>
 #include <vector>
+#include <memory>
 using std::vector;
+using std::shared_ptr;
 
 const int MAXEVENTS = 100;
+const int MAXFDS = 102400;
+
+class Channel;
 
 class Epoll
 {
@@ -15,12 +20,16 @@ class Epoll
         void add_event(int fd, int state);
         void mod_event(int fd, int state);
         void del_event(int fd, int state);
-        void wait_event();
-        vector<epoll_event> _events;
-        int _eventNum;
+        void add_channel(shared_ptr<Channel> channel);
+        void mod_channel(shared_ptr<Channel> channel);
+        void del_channel(shared_ptr<Channel> channel);
+        shared_ptr<Channel> get_channel(int fd){ return _fd2channel[fd]; }
+        void handle_activate_channels();
     
     private:
-        int _epollfd;        
+        vector<epoll_event> _events;
+        int _epollfd;
+        shared_ptr<Channel> _fd2channel[MAXFDS];   
 };
 
 #endif

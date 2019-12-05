@@ -8,6 +8,8 @@ using std::vector;
 using std::shared_ptr;
 
 const int MAXEVENTS = 100;
+const int MAXFDS = 102400;
+
 class Channel;
 
 class Epoll
@@ -25,7 +27,6 @@ class Epoll
         void handle_activate_channels();
     
     private:
-        static const int MAXFDS = 102400; 
         vector<epoll_event> _events;
         int _epollfd;
         shared_ptr<Channel> _fd2channel[MAXFDS];   
