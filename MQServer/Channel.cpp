@@ -9,17 +9,14 @@
 #include <queue>
 #include <unistd.h>
 #include <sys/time.h>
-#include "MessageQueue.h"
 using std::queue;
 using std::bind;
 using namespace rapidjson;
 
-const int MAXQUEUESIZE = 102400;
-extern MessageQueue msgQueue;
-
 Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
 :_eventLoop(eventLoop)
 ,_epoll(eventLoop->getEpoll())
+,_msgQueue(eventLoop->getQueue())
 ,_fd(fd)
 ,_state(CONNECTIING)
 { 
@@ -39,10 +36,10 @@ void Channel::handleRead()
     {
         bool zero = false;
         int nread = readn(_fd, _readmsg, zero);
-        printf("read message: ");
-        for(int i=0;i<nread;i++) putchar(_readmsg[_readmsg.length()-nread+i]);
-        printf("\n");
-        printf("zero:%d\n",zero);
+        // printf("read message: ");
+        // for(int i=0;i<nread;i++) putchar(_readmsg[_readmsg.length()-nread+i]);
+        // printf("\n");
+        // printf("zero:%d\n",zero);
         Document d;
         d.Parse(_readmsg.c_str());
         if(zero) //got EOF
@@ -55,26 +52,39 @@ void Channel::handleRead()
             string type = d["type"].GetString();
             if(type == "push")
             {
-                if(msgQueue.getSize() >= MAXQUEUESIZE)
+                if(_msgQueue.size() >= 1024)
                 {
-                    setWritemsg("push failure");
+                    setWritemsg("{\"result\":\"push failure\"}");
                     setEvents(EPOLLOUT);
                     update();
                 }
                 else
                 {
-                    setWritemsg("push success");
+                    setWritemsg("{\"result\":\"push success\"}");
                     setEvents(EPOLLIN|EPOLLOUT);
                     update();
-                    msgQueue.enqueue(Message(shared_from_this(), _readmsg));
+                    _msgQueue.push(_readmsg);
+                    printf("AFTER PUSH msgqueue size: %d\n",_msgQueue.size());
                 }
             }
             else if(type == "pop")
             {         
-                Message msg = msgQueue.dequeue();
-                setWritemsg(msg.msg);
-                setEvents(EPOLLOUT);
-                update();
+                //printf("msgqueue size: %d\n",_msgQueue.size());
+                if(!_msgQueue.empty())
+                {
+                    printf("???\n");
+                    string str = _msgQueue.front();
+                    _msgQueue.pop();
+                    setWritemsg(str);
+                    setEvents(EPOLLOUT);
+                    update();
+                }
+                else
+                {
+                    setWritemsg("{\"result\":\"pop failure\"}");
+                    setEvents(EPOLLOUT);
+                    update();
+                }
             }
             _readmsg.clear();       
         }    
@@ -88,7 +98,9 @@ void Channel::handleWrite()
     {
         if(!_writemsg.empty())
         {
+            //printf("writemsg: %s",_writemsg.c_str());
             int nwrite = writen(_fd, _writemsg);
+            //printf(" %d\n", nwrite);
             if(_writemsg.empty())
             {
                 setEvents(EPOLLIN);

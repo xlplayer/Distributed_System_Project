@@ -12,11 +12,9 @@
 #include <memory>
 #include <vector>
 #include <queue>
-#include "MessageQueue.h"
 using std::shared_ptr;
 using std::queue;
 
-MessageQueue msgQueue;
 
 int main(int argc, char **argv)
 {
@@ -42,6 +40,6 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    shared_ptr<Acceptor> acceptor(new Acceptor(port, threadsNum));
+    shared_ptr<Acceptor> acceptor(new Acceptor(port, 1));
     acceptor->loop();
 }

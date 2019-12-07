@@ -44,6 +44,7 @@ class Channel: public enable_shared_from_this<Channel>
         queue<string> &_msgQueue;
         int _fd;
         string _readmsg, _writemsg;
+        int _curlyCount;
         uint32_t _events;
         uint32_t _revents;
         STATE _state;

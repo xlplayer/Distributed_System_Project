@@ -11,6 +11,7 @@
 using std::make_shared;
 using std::bind;
 
+extern const int MAXFDS;
 const int LISTENQ = 100;
 
 Acceptor::Acceptor(int port, int threadsNum)
@@ -19,11 +20,6 @@ Acceptor::Acceptor(int port, int threadsNum)
 ,_eventLoopThreadPool(new EventLoopThreadPool(threadsNum))
 {
     listen(_listenfd, LISTENQ);
-    _acceptChannel = make_shared<Channel>(_listenfd);
-    _acceptChannel->setEvents(EPOLLIN);
-    _acceptChannel->setReadHandler(bind(&Acceptor::handleConnect, this));
-    _epoll->add_channel(_acceptChannel);
-
     _eventLoopThreadPool->start();
 }
 
@@ -34,29 +30,28 @@ Acceptor::~Acceptor()
 
 void Acceptor::loop()
 {
-    while(1)
-    {
-        _epoll->handle_activate_channels();
-    }
-}
-
-
-void Acceptor::handleConnect()
-{
     int clientfd;
     struct sockaddr_in clientaddr;
     socklen_t clientaddr_len = sizeof(clientaddr);
-    clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len));
+    while(1)
     {
+        clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len);
         printf("new connection from %s:%d\n",inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+        if(clientfd >= MAXFDS)
+        {
+            close(clientfd);
+            continue;
+        }
+
         shared_ptr<EventLoopThread> thread = _eventLoopThreadPool->getNextEventLoopThread();
         shared_ptr<EventLoop> loop = thread->getEventLoop();
         shared_ptr<Epoll> epoll = loop->getEpoll();
 
         setSocketNonBlocking(clientfd);
         shared_ptr<Channel> channel(new Channel(loop, clientfd));
-        channel->setEvents(EPOLLIN);
-        epoll->add_channel(channel);
+        channel->setEvents(EPOLLIN|EPOLLOUT);
+        loop->addPendingFunctions(bind(&Epoll::add_channel, epoll, channel));
+        loop->wakeup();
+        //epoll->add_channel(channel);
     }
-
 }

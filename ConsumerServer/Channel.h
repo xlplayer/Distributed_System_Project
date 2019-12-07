@@ -3,13 +3,11 @@
 
 #include <memory>
 #include <string.h>
-#include <queue>
 #include <functional>
 using std::enable_shared_from_this;
 using std::shared_ptr;
 using std::function;
 using std::string;
-using std::queue;
 
 enum STATE 
 {
@@ -33,6 +31,9 @@ class Channel: public enable_shared_from_this<Channel>
         void setRevents(uint32_t revents){ _revents = revents; }
         int getFd(){ return _fd; }
         void setWritemsg(string msg) { _writemsg = msg; }
+        string& getWritemsg(){ return _writemsg; }
+        string& getReadmsg(){ return _readmsg; }
+        void setState(STATE state) { _state = state; }
         void handleRead();
         void handleWrite();
         void handleEvents();
@@ -41,13 +42,11 @@ class Channel: public enable_shared_from_this<Channel>
         
         shared_ptr<EventLoop> _eventLoop;
         shared_ptr<Epoll> _epoll;
-        queue<string> &_msgQueue;
         int _fd;
         string _readmsg, _writemsg;
         uint32_t _events;
         uint32_t _revents;
         STATE _state;
-        
 
         function<void()> _readHandler;
         function<void()> _writerHandler;

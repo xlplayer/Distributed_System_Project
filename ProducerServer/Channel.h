@@ -31,6 +31,7 @@ class Channel: public enable_shared_from_this<Channel>
         void setRevents(uint32_t revents){ _revents = revents; }
         int getFd(){ return _fd; }
         string getTime() { return _time; }
+        string &getWritemsg() { return _writemsg; }
         void setWritemsg(string msg) { _writemsg = msg; }
         void handleRead();
         void handleWrite();
@@ -43,6 +44,7 @@ class Channel: public enable_shared_from_this<Channel>
         shared_ptr<Epoll> _epoll;
         int _fd;
         string _readmsg, _writemsg;
+        int _curlyCount;
         uint32_t _events;
         uint32_t _revents;
         STATE _state;

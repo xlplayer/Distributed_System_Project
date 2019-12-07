@@ -55,7 +55,7 @@ void MessageProducer::loop()
         write(_sockfd, str.c_str(), str.length());
         int nread = read(_sockfd, buf, 1024);
         str = string(buf, buf+nread);
-        if(str == "pop failure")
+        if(str == "{\"result\":\"push failure\"}")
         {
             StringBuffer s;
             Writer<StringBuffer> writer(s);

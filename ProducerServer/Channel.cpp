@@ -21,6 +21,7 @@ Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
 ,_epoll(eventLoop->getEpoll())
 ,_fd(fd)
 ,_state(CONNECTIING)
+,_curlyCount(0)
 {
     struct timeval cur;
     gettimeofday(&cur,NULL);
@@ -51,51 +52,64 @@ void Channel::handleRead()
         for(int i=0;i<nread;i++) putchar(_readmsg[_readmsg.length()-nread+i]);
         printf("\n");
         printf("zero:%d\n",zero);
-        Document d;
-        d.Parse(_readmsg.c_str());
         if(zero) //got EOF
         {
             printf("client closed\n");
             _state = DISCONNTING;
         }
-        if(d.IsObject())
+
+        Document d;
+        while(!_readmsg.empty())
         {
-            string operate = d["operate"].GetString();
-            if(operate == "reply")
+            int len;
+            for(len=0;len<_readmsg.length();len++) //count { and }
             {
-                int request_fd = d["fd"].GetInt();
-                shared_ptr<Channel> channel = _epoll->get_channel(request_fd);
-                printf("DDD\n");
-                string time = d["time"].GetString();
-                if(time == channel->getTime())
+                if(_readmsg[len]=='{') _curlyCount++;
+                else if(_readmsg[len]=='}') _curlyCount--;
+                if(_curlyCount == 0) break;
+            } 
+            if(_curlyCount == 0)
+            {
+                d.Parse(_readmsg.substr(0,len+1).c_str());
+                string operate = d["operate"].GetString();
+                if(operate == "reply")
                 {
-                    channel->setWritemsg(_readmsg);
-                    channel->setEvents(EPOLLOUT);
-                    channel->update();
-                    printf("AAA\n");
+                    int request_fd = d["fd"].GetInt();
+                    shared_ptr<Channel> channel = _epoll->get_channel(request_fd);
+                    printf("DDD\n");
+                    string time = d["time"].GetString();
+                    if(time == channel->getTime())
+                    {
+                        string &msg = channel->getWritemsg();
+                        msg += _readmsg.substr(0, len+1);
+                        printf("AAA\n");
+                    }
                 }
-            }
-            else
-            {         
-                StringBuffer s;
-                Writer<StringBuffer> writer(s);
-                writer.StartObject();
-                writer.Key("type");
-                writer.String("push");
-                writer.Key("time");
-                writer.String(_time.c_str());
-                writer.Key("ip");
-                writer.String(_eventLoop->getListenip().c_str());
-                writer.Key("port");
-                writer.Int(_eventLoop->getListenport());
-                writer.Key("fd");
-                writer.Int(_fd);
-                writer.Key("message");
-                writer.String(_readmsg.c_str());
-                writer.EndObject();       
-                msgQueue.enqueue(Message(shared_from_this(),s.GetString()));
-            }
-            _readmsg.clear();       
+                else
+                {         
+                    StringBuffer s;
+                    Writer<StringBuffer> writer(s);
+                    writer.StartObject();
+                    writer.Key("type");
+                    writer.String("push");
+                    writer.Key("time");
+                    writer.String(_time.c_str());
+                    writer.Key("ip");
+                    writer.String(_eventLoop->getListenip().c_str());
+                    writer.Key("port");
+                    writer.Int(_eventLoop->getListenport());
+                    writer.Key("fd");
+                    writer.Int(_fd);
+                    writer.Key("message");
+                    writer.String(_readmsg.c_str());
+                    writer.EndObject();       
+                    msgQueue.enqueue(Message(shared_from_this(),s.GetString()));
+                }
+
+                _readmsg = _readmsg.substr(len+1);
+                continue;
+            } 
+            break;    
         }    
     }           
 }   
@@ -107,13 +121,8 @@ void Channel::handleWrite()
     {
         if(!_writemsg.empty())
         {
-            int nwrite = writen(_fd, _writemsg);
-            if(_writemsg.empty())
-            {
-                setEvents(EPOLLIN);
-                update();
-            }
-                
+            printf("writemsg: %s\n",_writemsg.c_str());
+            writen(_fd, _writemsg); 
         }
     }
 }

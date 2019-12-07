@@ -61,16 +61,32 @@ int main(int argc, char **argv)
         char buf[BUFFLEN];
         int nread = read(sockfd, buf, BUFFLEN);
         string result = string(buf, buf+nread);
+
         Document d;
-        d.Parse(result.c_str());
-        Value &val = d["result"];
-        cout<<"查询结果如下:"<<endl;
-        for(size_t i=0; i<val.Size();i++)
+        int curlyCount = 0;
+        for(int i=0;!result.empty();i++)
         {
             Document &v = tickets[i];
-            v.Parse(val[i].GetString());
-            cout<<"["<<i<<"] "<<"车次:"<<v["train_number"].GetString()<<"\t\t出发站:"<<v["start"].GetString()\
-            <<"\t到达站:"<<v["end"].GetString()<<"\t剩余票数:"<<v["num"].GetUint()<<endl;
+
+            int len;
+            for(len=0;len<result.length();len++) //count { and }
+            {
+                if(result[len]=='{') curlyCount++;
+                else if(result[len]=='}') curlyCount--;
+                if(curlyCount == 0) break;
+            } 
+            if(curlyCount == 0)
+            {
+                d.Parse(result.substr(0,len+1).c_str());
+
+                v.Parse(d["result"].GetString());
+                cout<<"["<<i<<"] "<<"车次:"<<v["train_number"].GetString()<<"\t\t出发站:"<<v["start"].GetString()\
+                 <<"\t到达站:"<<v["end"].GetString()<<"\t剩余票数:"<<v["num"].GetUint()<<endl;
+                if(d["train_num"].GetInt() == i+1) break;  
+            }
+
+            result = result.substr(len+1);
+            continue;
         }
 
         int id;
