@@ -16,7 +16,7 @@ using std::enable_shared_from_this;
 
 class Epoll;
 class Channel;
-
+class Database;
 class EventLoop: public enable_shared_from_this<EventLoop>
 {
     public:
@@ -25,6 +25,7 @@ class EventLoop: public enable_shared_from_this<EventLoop>
         void handlewakeup();
         void handleConnect();
         void loop();
+        shared_ptr<Database> getDatabase(){ return _database; }
         shared_ptr<Epoll> getEpoll(){ return _epoll; }
         queue<string> &getQueue(){ return _msgQueue; }
         void addPendingFunctions(function<void()> &&cb);
@@ -36,6 +37,7 @@ class EventLoop: public enable_shared_from_this<EventLoop>
         int _wakeupfd;
         shared_ptr<Channel> _wakeupChannel;
         shared_ptr<Epoll> _epoll;
+        shared_ptr<Database> _database;
 
         vector<function<void()>> _pendingFunctions;
         MutexLock _mutex;

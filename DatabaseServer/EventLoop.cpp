@@ -1,5 +1,6 @@
 #include "EventLoop.h"
 #include "Epoll.h"
+#include "Database.h"
 #include "Channel.h"
 #include "Socket.h"
 #include <unistd.h>
@@ -18,6 +19,7 @@ extern int socket_bind(int port);
 EventLoop::EventLoop()
 :_wakeupfd(eventfd(0, EFD_NONBLOCK|EFD_CLOEXEC))
 ,_epoll(new Epoll())
+,_database(new Database())
 ,_mutex()
 {}
 

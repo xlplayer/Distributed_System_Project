@@ -40,6 +40,6 @@ int main(int argc, char **argv)
                 break;
         }
     }
-    shared_ptr<Acceptor> acceptor(new Acceptor(port, 1));
+    shared_ptr<Acceptor> acceptor(new Acceptor(port, threadsNum));
     acceptor->loop();
 }

@@ -14,27 +14,26 @@ using namespace std;
 using std::bind;
 
 extern const int MAXFDS;
+extern vector<sockaddr_in> queueServerAddr,databaseServerAddr;
 extern int socket_bind(int port);
 
-EventLoop::EventLoop(vector<sockaddr_in> &queueServerAddr, vector<sockaddr_in> &_databaseServerAddr)
-:_queueServerAddr(queueServerAddr)
-,_databaseServerAddr(_databaseServerAddr)
-,_curlyCount(0)
+EventLoop::EventLoop()
+:_curlyCount(0)
 ,_wakeupfd(eventfd(0, EFD_NONBLOCK|EFD_CLOEXEC))
 ,_epoll(new Epoll())
 ,_mutex()
 {
     int index = rand()%queueServerAddr.size();
     _queuefd = socket(AF_INET, SOCK_STREAM, 0);
-    if(connect(_queuefd, (struct sockaddr*)&_queueServerAddr[index], sizeof(_queueServerAddr[index])) == -1)
+    if(connect(_queuefd, (struct sockaddr*)&queueServerAddr[index], sizeof(queueServerAddr[index])) == -1)
     {
         perror("consumer connect queue failed.");
     }
     setSocketNonBlocking(_queuefd);
 
-    index = rand()%_databaseServerAddr.size();
+    index = rand()%databaseServerAddr.size();
     _databasefd = socket(AF_INET, SOCK_STREAM, 0);
-    if(connect(_databasefd, (struct sockaddr*)&_databaseServerAddr[index], sizeof(_databaseServerAddr[index])) == -1)
+    if(connect(_databasefd, (struct sockaddr*)&databaseServerAddr[index], sizeof(databaseServerAddr[index])) == -1)
     {
         perror("consumer connect database failed.");
     } 

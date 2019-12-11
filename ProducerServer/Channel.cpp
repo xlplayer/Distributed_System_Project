@@ -78,7 +78,7 @@ void Channel::handleRead()
                     shared_ptr<Channel> channel = _epoll->get_channel(request_fd);
                     printf("DDD\n");
                     string time = d["time"].GetString();
-                    if(time == channel->getTime())
+                    if(channel && time == channel->getTime())
                     {
                         string &msg = channel->getWritemsg();
                         msg += _readmsg.substr(0, len+1);

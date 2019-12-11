@@ -29,7 +29,7 @@ class Channel;
 class EventLoop: public enable_shared_from_this<EventLoop>
 {
     public:
-        EventLoop(vector<sockaddr_in> &queueServerAddr, vector<sockaddr_in> &_databaseServerAddr);
+        EventLoop();
         ~EventLoop();
         void handleQueueRead();
         void handleQueueWrite();
@@ -46,7 +46,7 @@ class EventLoop: public enable_shared_from_this<EventLoop>
     private:
         map<pair<string, int>, shared_ptr<Channel> > _addr2channel;
         queue<string> _msgQueue;
-        vector<sockaddr_in> &_queueServerAddr, &_databaseServerAddr;
+        //vector<sockaddr_in> &_queueServerAddr, &_databaseServerAddr;
         int _queuefd;
         int _databasefd;
         int _wakeupfd;

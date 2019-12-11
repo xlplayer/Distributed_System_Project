@@ -19,6 +19,7 @@ enum STATE
 };
 class EventLoop;
 class Epoll;
+class Database;
 
 class Channel: public enable_shared_from_this<Channel>
 {
@@ -41,6 +42,7 @@ class Channel: public enable_shared_from_this<Channel>
         
         shared_ptr<EventLoop> _eventLoop;
         shared_ptr<Epoll> _epoll;
+        shared_ptr<Database> _database;
         queue<string> &_msgQueue;
         int _fd;
         string _readmsg, _writemsg;
