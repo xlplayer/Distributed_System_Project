@@ -75,7 +75,7 @@ void EventLoop::loop()
 
 void EventLoop::addPendingFunctions(function<void()> &&cb)
 {
-    MutexLockGuard lcok(_mutex);
+    MutexLockGuard lock(_mutex);
     _pendingFunctions.push_back(cb);
 }
 

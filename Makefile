@@ -16,7 +16,7 @@ MQSOURCES = $(MQDIR)/*.cpp
 
 
 CC = g++
-CFLAGS = -std=c++11 -O2 -lpthread
+CFLAGS = -std=c++11 -g -lpthread
 
 all:
 

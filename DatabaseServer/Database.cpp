@@ -4,9 +4,13 @@
 #include "../rapidjson/writer.h"
 #include <iostream>
 #include <stdlib.h>
-
+#include "TicketManager.h"
+#include <memory>
+using std::shared_ptr;
 using namespace rapidjson;
 using namespace std;
+
+extern map<string, vector<Ticket> > tickets;
 
 Database::Database()
 {
@@ -75,11 +79,21 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
 
-    sprintf(query, "select count(*) from %s_%s where start <= %s and end >= %s and status = \"unsold\"", date.c_str(), train.c_str(), start_idx.c_str(), end_idx.c_str());
-    cout<<query<<endl;
-    mysql_query(conn, query);
-    res_ptr = mysql_store_result(conn);
-    string left_num = mysql_fetch_row(res_ptr)[0];
+    int left_num = 0;
+    vector<Ticket> &tik = tickets[date+"_"+train];
+    int size = tik.size();
+    for(int i=0;i<size;i++)
+    {
+        Ticket &item = tik[i];
+        //MutexLockGuard lock(item._mutex);
+        if(item._valid)
+        {
+            unsigned  bits = 0;
+            for(int i = atoi(start_idx.c_str()); i < atoi(end_idx.c_str()); i++)
+                bits |= (1<<(i-1));
+            if(bits & item._bits) left_num++;
+        }  
+    }
 
     StringBuffer s;
     Writer<StringBuffer> writer(s);
@@ -91,7 +105,7 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
     writer.Key("end");
     writer.String(end.c_str());
     writer.Key("num");
-    writer.Uint(atoi(left_num.c_str()));
+    writer.Uint(left_num);
     writer.EndObject();
     result = s.GetString();
 
@@ -118,10 +132,35 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
 
+
+    unsigned  bits = 0;
+    for(int i = atoi(start_idx.c_str()); i < atoi(end_idx.c_str()); i++)
+        bits |= (1<<(i-1));
+        
+    Ticket old_ticket;
+    vector<Ticket> &tik = tickets[date+"_"+train_number];
+    int size = tik.size();
+    for(int i=0;i<size;i++)
+    {
+        Ticket &item = tik[i];
+        if(item._valid && (item._bits & bits))//double check
+        {
+            MutexLockGuard lock(item._mutex);
+            if(item._valid && (item._bits & bits))//double check
+            {
+                item._valid = false;
+                sprintf(query, "select * from %s_%s where id = \"%s\" for update", date.c_str(),train_number.c_str(),item._id.c_str());
+                cout<<query<<endl;
+
+                old_ticket._id = item._id;
+                old_ticket._bits = item._bits;//don't copy mutex!
+                break;
+            }
+        }
+    }
+    int id_x=-1,id_y=-1;
     mysql_autocommit(conn, false);
     do{
-        sprintf(query, "select * from %s_%s where start <= %s and end >= %s and status = \"unsold\" limit 1 for update", date.c_str(),train_number.c_str(),start_idx.c_str(), end_idx.c_str());
-        cout<<query<<endl;
         if(mysql_query(conn, query))
         { 
             success = false;
@@ -154,6 +193,7 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
                 success = false;
                 break;
             }  
+            id_x = mysql_insert_id(conn);
         }
 
         if(atoi(end_idx.c_str()) < atoi(tail.c_str()))
@@ -166,6 +206,7 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
                 success = false;
                 break;
             }  
+            id_y = mysql_insert_id(conn);
         }
         
     }while(false);
@@ -175,15 +216,29 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     writer.StartObject();
     if(success == false)
     {
+        tickets[date+"_"+train_number].push_back(old_ticket);
         mysql_rollback(conn);
         mysql_autocommit(conn, true);
         writer.Key("result");
         writer.String("failure");
     }
     else
-    {
+    {  
         mysql_commit(conn);
         mysql_autocommit(conn, true);
+        char buf[20];
+        if(id_x!=-1) 
+        {
+            sprintf(buf,"%d",id_x);
+            cout<<"idx: "<<buf<<endl;
+            tickets[date+"_"+train_number].push_back(Ticket(head,start_idx,buf));
+        }
+        if(id_y!=-1) 
+        {
+            sprintf(buf,"%d",id_y);
+            cout<<"idy: "<<buf<<endl;
+            tickets[date+"_"+train_number].push_back(Ticket(end_idx,tail,buf));
+        }
         writer.Key("result");
         writer.String("success");
         writer.Key("compartment_number");
@@ -193,6 +248,7 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     }
     writer.EndObject();
     result = s.GetString();
-    
+
     mysql_free_result(res_ptr);
+    cout<<"CCC"<<endl;
 }

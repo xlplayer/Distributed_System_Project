@@ -112,8 +112,9 @@ void Channel::handleRead()
                     passenger_name = d["passenger_name"].GetString();
                     passenger_id = d["passenger_id"].GetString();
                     string result;
+                    cout<<"AAA"<<endl;
                     _database->buyTicket(date, train_number, start, end, passenger_name, passenger_id, result);
-                    
+                    cout<<"result: "<<result<<endl;
                     Document d_tmp;
                     d_tmp.Parse(result.c_str());
                     result = d_tmp["result"].GetString();
@@ -123,14 +124,17 @@ void Channel::handleRead()
                     }
                     else if(result == "success")
                     {
+                        cout<<"AAA"<<endl;
                         d.AddMember("result", "success", d.GetAllocator());
                         d.AddMember("compartment_number", StringRef(d_tmp["compartment_number"].GetString()), d.GetAllocator());
                         d.AddMember("seat_number", StringRef(d_tmp["seat_number"].GetString()), d.GetAllocator());
                     }
+                    cout<<"BBB"<<endl;
                     StringBuffer s;
                     Writer<StringBuffer> writer(s);
                     d.Accept(writer);
                     _writemsg += s.GetString();
+                    cout<<"result: "<<_writemsg<<endl;
                 }
                 else if(operate == "pay")
                 {
