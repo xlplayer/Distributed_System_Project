@@ -9,6 +9,7 @@
 #include <queue>
 #include <unistd.h>
 #include <sys/time.h>
+#include <hiredis/hiredis.h>
 #include "MessageQueue.h"
 using std::queue;
 using std::bind;
@@ -19,6 +20,7 @@ extern MessageQueue msgQueue;
 Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
 :_eventLoop(eventLoop)
 ,_epoll(eventLoop->getEpoll())
+,_redis(eventLoop->getRedis())
 ,_fd(fd)
 ,_state(CONNECTIING)
 ,_curlyCount(0)
@@ -84,9 +86,59 @@ void Channel::handleRead()
                         msg += _readmsg.substr(0, len+1);
                         printf("AAA\n");
                     }
+                    if(d.HasMember("train_num")) //cache
+                    {
+                        redisCommand(_redis,"sadd %s_%s_%s %s",d["date"].GetString(),d["start"].GetString(),d["end"].GetString(),_readmsg.substr(0, len+1).c_str());
+                    }
                 }
-                else
-                {         
+                else if(operate == "query")
+                {
+                    redisReply* reply = (redisReply*)redisCommand(_redis, "smembers %s_%s_%s",d["date"].GetString(),d["start"].GetString(),d["end"].GetString());
+                    printf("type: %d\n",reply->type);
+                    if(reply == NULL || reply->elements == 0)
+                    {
+                        StringBuffer s;
+                        Writer<StringBuffer> writer(s);
+                        writer.StartObject();
+                        writer.Key("type");
+                        writer.String("push");
+                        writer.Key("time");
+                        writer.String(_time.c_str());
+                        writer.Key("ip");
+                        writer.String(_eventLoop->getListenip().c_str());
+                        writer.Key("port");
+                        writer.Int(_eventLoop->getListenport());
+                        writer.Key("fd");
+                        writer.Int(_fd);
+                        writer.Key("message");
+                        writer.String(_readmsg.c_str());
+                        writer.EndObject();       
+                        msgQueue.enqueue(Message(shared_from_this(),s.GetString()));
+                    }
+                    else if(reply->type == REDIS_REPLY_ARRAY && reply->elements > 0)
+                    {
+                        d["operate"].SetString("reply");
+                        d.AddMember("train_num", 0, d.GetAllocator());
+                        d.AddMember("result","", d.GetAllocator());
+                        for(int i=0;i<reply->elements;i++)
+                        {
+                            Document d_tmp;
+                            d_tmp.Parse(reply->element[i]->str);  
+                            d["train_num"].SetUint(d_tmp["train_num"].GetUint());
+                            d["result"].SetString(StringRef(d_tmp["result"].GetString()));
+                            StringBuffer s;
+                            Writer<StringBuffer> writer(s);
+                            d.Accept(writer);
+                            _writemsg += s.GetString();
+                        }
+                    }
+                }
+                else if(operate == "buy" || operate == "pay")
+                {    
+                    if(operate == "buy")//remove cache
+                    {
+                        redisCommand(_redis,"del %s_%s_%s",d["date"].GetString(),d["start"].GetString(),d["end"].GetString());
+                    }     
                     StringBuffer s;
                     Writer<StringBuffer> writer(s);
                     writer.StartObject();

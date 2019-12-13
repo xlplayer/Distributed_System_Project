@@ -6,6 +6,7 @@
 #include <functional>
 #include "MutexLock.h"
 #include "MessageProducer.h"
+#include <hiredis/hiredis.h>
 using std::shared_ptr;
 using std::string;
 using std::function;
@@ -22,6 +23,7 @@ class EventLoop: public enable_shared_from_this<EventLoop>
         void handlewakeup();
         void handleConnect();
         void loop();
+        redisContext* getRedis() { return _redis; }
         string getListenip() { return _listen_ip; }
         int getListenport() { return _listen_port; }
         shared_ptr<Epoll> getEpoll(){ return _epoll; }
@@ -30,6 +32,7 @@ class EventLoop: public enable_shared_from_this<EventLoop>
         void wakeup();
    
     private:
+        redisContext* _redis;
         int _wakeupfd;
         shared_ptr<Channel> _wakeupChannel;
         shared_ptr<Epoll> _epoll;

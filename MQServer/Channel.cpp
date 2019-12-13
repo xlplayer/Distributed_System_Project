@@ -64,7 +64,6 @@ void Channel::handleRead()
                     setEvents(EPOLLIN|EPOLLOUT);
                     update();
                     _msgQueue.push(_readmsg);
-                    printf("AFTER PUSH msgqueue size: %d\n",_msgQueue.size());
                 }
             }
             else if(type == "pop")

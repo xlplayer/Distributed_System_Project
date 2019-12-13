@@ -24,6 +24,7 @@ EventLoop::EventLoop()
     if(listen(_listenfd, 100) < 0)
         perror("listen failed.");
     setSocketNonBlocking(_listenfd);
+    _redis = redisConnect("127.0.0.1", 6379);
 }
 
 EventLoop::~EventLoop()

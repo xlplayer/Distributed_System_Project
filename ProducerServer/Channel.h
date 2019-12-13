@@ -4,6 +4,7 @@
 #include <memory>
 #include <string.h>
 #include <functional>
+#include <hiredis/hiredis.h>
 using std::enable_shared_from_this;
 using std::shared_ptr;
 using std::function;
@@ -39,7 +40,7 @@ class Channel: public enable_shared_from_this<Channel>
         void addToEpoll();
     
     private:
-        
+        redisContext* _redis;
         shared_ptr<EventLoop> _eventLoop;
         shared_ptr<Epoll> _epoll;
         int _fd;

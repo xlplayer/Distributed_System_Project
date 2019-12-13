@@ -2,10 +2,12 @@
 #include "assert.h"
 #include <vector>
 #include <iostream>
+#include <sys/time.h>
+#include <unistd.h>
 using namespace std;
 using std::vector;
 
-extern   map<string, vector<Ticket> > tickets;
+extern  map<string, vector<Ticket> > tickets;
 
 TicketManager::TicketManager()
 {
@@ -56,8 +58,20 @@ void TicketManager::update()
 
 void TicketManager::loop()
 {
+    int day = -1;
     while(1)
     {
-
+        struct timeval cur;
+        gettimeofday(&cur,NULL);
+        time_t time = cur.tv_sec;
+        struct tm* p_time = localtime(&time);
+        cout<<"day:"<<p_time->tm_mday<<endl;
+        if(p_time->tm_hour == 4 && p_time->tm_mday != day)
+        {
+            day = p_time->tm_mday;
+            tickets.clear();
+            update();
+        }
+        sleep(1200);
     }
 }

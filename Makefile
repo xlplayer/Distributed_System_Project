@@ -16,12 +16,12 @@ MQSOURCES = $(MQDIR)/*.cpp
 
 
 CC = g++
-CFLAGS = -std=c++11 -g -lpthread
+CFLAGS = -std=c++11 -O3 -lpthread
 
 all:
 
 producer : $(PRODUCERSOURCES)
-	$(CC) -o $(PRODUCEROBJ) $(PRODUCERSOURCES) $(CFLAGS) 
+	$(CC) -o $(PRODUCEROBJ) $(PRODUCERSOURCES)  $(CFLAGS) -lhiredis
 
 consumer : $(CONSUMERSOURCES)
 	$(CC) -o $(CONSUMEROBJ) $(CONSUMERSOURCES)  $(CFLAGS)
