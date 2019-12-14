@@ -36,7 +36,9 @@ void Acceptor::loop()
     while(1)
     {
         clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len);
+        #ifdef DEBUG 
         printf("new connection from %s:%d\n",inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+        #endif
         if(clientfd >= MAXFDS)
         {
             close(clientfd);

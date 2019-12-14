@@ -52,7 +52,7 @@ void MessageProducer::loop()
         Message msg = msgQueue.dequeue();
         shared_ptr<Channel> channel = msg.channel;
         string str = msg.msg;
-        write(_sockfd, str.c_str(), str.length());
+        int nwrite = write(_sockfd, str.c_str(), str.length());
         int nread = read(_sockfd, buf, 1024);
         str = string(buf, buf+nread);
         if(str == "{\"result\":\"push failure\"}")

@@ -2,13 +2,11 @@
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/document.h"
 #include "../rapidjson/writer.h"
-#include <iostream>
 #include <stdlib.h>
 #include "TicketManager.h"
 #include <memory>
 using std::shared_ptr;
 using namespace rapidjson;
-using namespace std;
 
 extern map<string, vector<Ticket> > tickets;
 
@@ -30,7 +28,7 @@ void Database::getTrains(string &start, string &end, vector<string> &trains)
     char query[1024];
 
     sprintf(query, "select * from station_train where start = \"%s\" and end = \"%s\"", start.c_str(), end.c_str());
-    cout<<query<<endl;
+   
     int res = mysql_query(conn, query);
     if (res) 
 	{ 
@@ -43,15 +41,19 @@ void Database::getTrains(string &start, string &end, vector<string> &trains)
         {
             int column = mysql_num_fields(res_ptr);
             int row = mysql_num_rows(res_ptr);
+            #ifdef DEBUG
             for (int i = 0; field = mysql_fetch_field(res_ptr); i++)
                 printf("%s\t", field->name);
             printf("\n");
+            #endif
             for (int i = 0; i < row; i++)
             {
                 result_row = mysql_fetch_row(res_ptr);
+                #ifdef DEBUG
                 for (int j = 0; j < column; j++)
                     printf("%s\t", result_row[j]);
                 printf("\n");
+                #endif
                 trains.push_back(result_row[3]);
             }
 
@@ -68,13 +70,17 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
     int res;
 
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train.c_str(), start.c_str());
-    cout<<query<<endl;
+    #ifdef DEBUG 
+    printf("%s\n",query);
+    #endif
     mysql_query(conn, query);
     res_ptr = mysql_store_result(conn);
     start_idx = mysql_fetch_row(res_ptr)[0];
 
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train.c_str(), end.c_str());
-    cout<<query<<endl;
+    #ifdef DEBUG 
+    printf("%s\n",query);
+    #endif
     mysql_query(conn, query);
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
@@ -122,12 +128,16 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     char query[1024];
 
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train_number.c_str(), start.c_str());
-    cout<<query<<endl;
+    #ifdef DEBUG 
+    printf("%s\n",query);
+    #endif
     mysql_query(conn, query);
     res_ptr = mysql_store_result(conn);
     start_idx = mysql_fetch_row(res_ptr)[0];
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train_number.c_str(), end.c_str());
-    cout<<query<<endl;
+    #ifdef DEBUG 
+    printf("%s\n",query);
+    #endif
     mysql_query(conn, query);
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
@@ -150,7 +160,9 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
             {
                 item._valid = false;
                 sprintf(query, "select * from %s_%s where id = \"%s\" for update", date.c_str(),train_number.c_str(),item._id.c_str());
-                cout<<query<<endl;
+                #ifdef DEBUG 
+                printf("%s\n",query);
+                #endif
 
                 old_ticket._id = item._id;
                 old_ticket._bits = item._bits;//don't copy mutex!
@@ -158,6 +170,12 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
             }
         }
     }
+    if(old_ticket._id == "null")//no ticket left
+    {
+        result = "{\"result\":\"failure\"}";
+        return ;
+    }
+
     int id_x=-1,id_y=-1;
     mysql_autocommit(conn, false);
     do{
@@ -176,7 +194,9 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
 
         sprintf(query, "update %s_%s set status = \"unpaid\", start = %s, end = %s, passenger_name = \"%s\", passenger_id = \"%s\" \
                         where id = %s", date.c_str(),train_number.c_str(), start_idx.c_str(), end_idx.c_str(), passenger_name.c_str(), passenger_id.c_str(), id.c_str());
-        cout<<query<<endl;
+        #ifdef DEBUG 
+        printf("%s\n",query);
+        #endif
         if (mysql_query(conn, query)) 
         { 
             success = false;
@@ -187,7 +207,9 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         {
             sprintf(query, "insert into %s_%s (status,start,end,seat_number,compartment_number) values (\"unsold\",%s,%s,%s,%s)", 
                             date.c_str(),train_number.c_str(),head.c_str(), start_idx.c_str(), seat_number.c_str(), compartment_number.c_str());
-            cout<<query<<endl;
+            #ifdef DEBUG 
+            printf("%s\n",query);
+            #endif
             if (mysql_query(conn, query)) 
             { 
                 success = false;
@@ -200,7 +222,9 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         {
             sprintf(query, "insert into %s_%s (status,start,end,seat_number,compartment_number) values (\"unsold\",%s,%s,%s,%s)", 
                             date.c_str(),train_number.c_str(),end_idx.c_str(), tail.c_str(), seat_number.c_str(), compartment_number.c_str());
-            cout<<query<<endl;
+            #ifdef DEBUG 
+            printf("%s\n",query);
+            #endif
             if (mysql_query(conn, query)) 
             { 
                 success = false;
@@ -230,13 +254,11 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         if(id_x!=-1) 
         {
             sprintf(buf,"%d",id_x);
-            cout<<"idx: "<<buf<<endl;
             tickets[date+"_"+train_number].push_back(Ticket(head,start_idx,buf));
         }
         if(id_y!=-1) 
         {
             sprintf(buf,"%d",id_y);
-            cout<<"idy: "<<buf<<endl;
             tickets[date+"_"+train_number].push_back(Ticket(end_idx,tail,buf));
         }
         writer.Key("result");
@@ -245,10 +267,49 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         writer.String(compartment_number.c_str());
         writer.Key("seat_number");
         writer.String(seat_number.c_str());
+        writer.Key("id");
+        writer.String(id.c_str());
     }
     writer.EndObject();
     result = s.GetString();
 
     mysql_free_result(res_ptr);
-    cout<<"CCC"<<endl;
+}
+
+void Database::payTicket(string &date, string &train_number, string &id, string &result)
+{
+    char query[1024];
+    do
+    {
+        sprintf(query, "select status from %s_%s where id = \"%s\" for update", date.c_str(),train_number.c_str(),id.c_str());
+        #ifdef DEBUG 
+        printf("%s\n",query);
+        #endif
+        if (mysql_query(conn, query)) 
+        { 
+            result = "付款失败!";
+            break;
+        }
+
+        res_ptr = mysql_store_result(conn);
+        string status = mysql_fetch_row(res_ptr)[0];
+        if(status == "unsold")
+            result = "错误！该车票未被购买！";
+        else if(status == "unpaid")
+        {
+            sprintf(query, "update %s_%s set status = \"paid\" where id = %s", date.c_str(),train_number.c_str(), id.c_str());
+            #ifdef DEBUG 
+            printf("%s\n",query);
+            #endif
+            if (mysql_query(conn, query))  
+                result = "付款失败!";
+            else 
+                result = "付款成功!";
+        }
+        else if(status == "paid")
+            result = "错误！该车票已付款！";
+        
+    } while (false);
+    
+    mysql_free_result(res_ptr);
 }

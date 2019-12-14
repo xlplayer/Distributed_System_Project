@@ -1,9 +1,13 @@
 #include "Thread.h"
+#include "Condition.h"
+#include "MutexLock.h"
 
 Thread::Thread(function<void()> &&cb)
 :_isRunning(false)
 ,_tid(0)
 ,_cb(cb)
+,_mutex()
+,_cond(_mutex)
 {}
 
 Thread::~Thread()
@@ -14,16 +18,31 @@ Thread::~Thread()
     }
 }
 
+struct threadData //use this to prevent new thread run after data has been release
+{
+    threadData(Condition &cond, function<void()> &func):_cond(cond),_func(func){}
+    Condition &_cond;
+    function<void()> &_func;
+    void run()
+    {
+        _cond.notifyAll();
+        _func();
+    }
+};
+
 void* Thread::threadFunc(void *arg)
 {
-    Thread *p = static_cast<Thread*>(arg);
-    if(p) p->_cb();
+    threadData *data = static_cast<threadData*>(arg);
+    data->run();
+    delete data;
     return NULL;
 }
 
 void Thread::start()
 {
-    pthread_create(&_tid, NULL, threadFunc, this);
+    threadData *data = new threadData(_cond, _cb);
+    pthread_create(&_tid, NULL, threadFunc, data);
+    _cond.wait();
     _isRunning = true;
 }
 

@@ -1,17 +1,17 @@
 #ifndef CONDITION_H
-#define CONTIDION_H
+#define CONDITION_H
 
 #include <pthread.h>
 #include "MutexLock.h"
 
-class Contidion
+class Condition
 {
     public:
-        Contidion(MutexLock &mutex):_mutex(mutex)
+        Condition(MutexLock &mutex):_mutex(mutex)
         {
             pthread_cond_init(&_cond, NULL);
         }
-        ~Contidion()
+        ~Condition()
         {
             pthread_cond_destroy(&_cond);
         }

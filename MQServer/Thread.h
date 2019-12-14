@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <functional>
+#include "Condition.h"
 using std::function;
 
 class Thread
@@ -18,6 +19,8 @@ class Thread
         bool _isRunning;
         pthread_t _tid;
         function<void()> _cb;
+        MutexLock _mutex;
+        Condition _cond;
 };
 
 #endif

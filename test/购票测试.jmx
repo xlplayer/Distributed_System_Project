@@ -18,8 +18,8 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">5</stringProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">500</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <stringProp name="ThreadGroup.num_threads">1000</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">10</stringProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
@@ -32,7 +32,7 @@
           <stringProp name="TCPSampler.port">40000</stringProp>
           <boolProp name="TCPSampler.nodelay">false</boolProp>
           <stringProp name="TCPSampler.timeout"></stringProp>
-          <stringProp name="TCPSampler.request">{&quot;operate&quot;:&quot;query&quot;,&quot;date&quot;:&quot;20191201&quot;,&quot;start&quot;:&quot;南京南&quot;,&quot;end&quot;:&quot;北京南&quot;}</stringProp>
+          <stringProp name="TCPSampler.request">{&quot;operate&quot;:&quot;buy&quot;,&quot;date&quot;:&quot;20191201&quot;,&quot;train_number&quot;:&quot;G102&quot;,&quot;start&quot;:&quot;南京南&quot;,&quot;end&quot;:&quot;北京南&quot;,&quot;passenger_name&quot;:&quot;刘晓黎&quot;,&quot;passenger_id&quot;:&quot;123456&quot;}</stringProp>
           <boolProp name="TCPSampler.closeConnection">false</boolProp>
           <stringProp name="TCPSampler.EolByte">125</stringProp>
           <stringProp name="ConfigTestElement.username"></stringProp>

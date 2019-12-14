@@ -1,10 +1,8 @@
 #include "TicketManager.h"
 #include "assert.h"
 #include <vector>
-#include <iostream>
 #include <sys/time.h>
 #include <unistd.h>
-using namespace std;
 using std::vector;
 
 extern  map<string, vector<Ticket> > tickets;
@@ -45,14 +43,6 @@ void TicketManager::update()
             tickets[trains[i]].push_back(Ticket(result_row[2],result_row[3],result_row[0]));
         }
     }
-    // for(auto iter : _tickets)
-    // {
-    //     cout<<iter.first<<endl;
-    //     for(auto t : iter.second)
-    //     {
-    //         cout<<t._bits<<" "<<t._id<<endl;
-    //     }
-    // }
     mysql_free_result(res_ptr);
 }
 
@@ -65,7 +55,9 @@ void TicketManager::loop()
         gettimeofday(&cur,NULL);
         time_t time = cur.tv_sec;
         struct tm* p_time = localtime(&time);
-        cout<<"day:"<<p_time->tm_mday<<endl;
+        #ifdef DEBUG
+        printf("day:%d",p_time->tm_mday);
+        #endif
         if(p_time->tm_hour == 4 && p_time->tm_mday != day)
         {
             day = p_time->tm_mday;

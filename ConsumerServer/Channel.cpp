@@ -20,14 +20,18 @@ Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
 ,_epoll(eventLoop->getEpoll())
 ,_fd(fd)
 ,_state(CONNECTIING)
-{ 
+{
+    #ifdef DEBUG 
     printf("channel newed :%d\n",_fd);
+    #endif
 }
 
 Channel::~Channel()
 {
     close(_fd);
+    #ifdef DEBUG 
     printf("channel released :%d\n",_fd);
+    #endif
 }
 
 void Channel::handleRead()
@@ -40,7 +44,9 @@ void Channel::handleWrite()
     if(_writerHandler) _writerHandler();
     else
     {
+        #ifdef DEBUG
         if(_writemsg.size()>0) printf("response: %s\n", _writemsg.c_str());
+        #endif
         writen(_fd, _writemsg);
     }
     

@@ -33,14 +33,18 @@ Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
     strftime(s, 26, "%Y-%m-%d %H:%M:%S", p_time);
     snprintf(t,40,"%s:%ld",s,cur.tv_usec);
     _time = string(t,t+strlen(t));
-    
+
+    #ifdef DEBUG 
     printf("channel newed :%d\n",_fd);
+    #endif
 }
 
 Channel::~Channel()
 {
     close(_fd);
+    #ifdef DEBUG 
     printf("channel released :%d\n",_fd);
+    #endif
 }
 
 void Channel::handleRead()
@@ -50,13 +54,17 @@ void Channel::handleRead()
     {
         bool zero = false;
         int nread = readn(_fd, _readmsg, zero);
+        #ifdef DEBUG 
         printf("read message: ");
         for(int i=0;i<nread;i++) putchar(_readmsg[_readmsg.length()-nread+i]);
         printf("\n");
         printf("zero:%d\n",zero);
-        if(zero) //got EOF
+        #endif
+        if(zero || nread == -1) //got EOF or close force
         {
+            #ifdef DEBUG 
             printf("client closed\n");
+            #endif
             _state = DISCONNTING;
         }
 
@@ -78,13 +86,11 @@ void Channel::handleRead()
                 {
                     int request_fd = d["fd"].GetInt();
                     shared_ptr<Channel> channel = _epoll->get_channel(request_fd);
-                    printf("DDD\n");
                     string time = d["time"].GetString();
                     if(channel && time == channel->getTime())
                     {
                         string &msg = channel->getWritemsg();
                         msg += _readmsg.substr(0, len+1);
-                        printf("AAA\n");
                     }
                     if(d.HasMember("train_num")) //cache
                     {
@@ -94,7 +100,6 @@ void Channel::handleRead()
                 else if(operate == "query")
                 {
                     redisReply* reply = (redisReply*)redisCommand(_redis, "smembers %s_%s_%s",d["date"].GetString(),d["start"].GetString(),d["end"].GetString());
-                    printf("type: %d\n",reply->type);
                     if(reply == NULL || reply->elements == 0)
                     {
                         StringBuffer s;
@@ -173,7 +178,9 @@ void Channel::handleWrite()
     {
         if(!_writemsg.empty())
         {
+            #ifdef DEBUG 
             printf("writemsg: %s\n",_writemsg.c_str());
+            #endif
             writen(_fd, _writemsg); 
         }
     }

@@ -20,13 +20,17 @@ Channel::Channel(shared_ptr<EventLoop> eventLoop, int fd)
 ,_fd(fd)
 ,_state(CONNECTIING)
 { 
+    #ifdef DEBUG 
     printf("channel newed :%d\n",_fd);
+    #endif
 }
 
 Channel::~Channel()
 {
     close(_fd);
+    #ifdef DEBUG 
     printf("channel released :%d\n",_fd);
+    #endif
 }
 
 void Channel::handleRead()
@@ -36,15 +40,14 @@ void Channel::handleRead()
     {
         bool zero = false;
         int nread = readn(_fd, _readmsg, zero);
-        // printf("read message: ");
-        // for(int i=0;i<nread;i++) putchar(_readmsg[_readmsg.length()-nread+i]);
-        // printf("\n");
-        // printf("zero:%d\n",zero);
+
         Document d;
         d.Parse(_readmsg.c_str());
-        if(zero) //got EOF
+        if(zero || nread == -1) //got EOF or close force
         {
+            #ifdef DEBUG 
             printf("client closed\n");
+            #endif
             _state = DISCONNTING;
         }
         if(d.IsObject())
@@ -68,10 +71,8 @@ void Channel::handleRead()
             }
             else if(type == "pop")
             {         
-                //printf("msgqueue size: %d\n",_msgQueue.size());
                 if(!_msgQueue.empty())
                 {
-                    printf("???\n");
                     string str = _msgQueue.front();
                     _msgQueue.pop();
                     setWritemsg(str);
@@ -97,9 +98,7 @@ void Channel::handleWrite()
     {
         if(!_writemsg.empty())
         {
-            //printf("writemsg: %s",_writemsg.c_str());
             int nwrite = writen(_fd, _writemsg);
-            //printf(" %d\n", nwrite);
             if(_writemsg.empty())
             {
                 setEvents(EPOLLIN);

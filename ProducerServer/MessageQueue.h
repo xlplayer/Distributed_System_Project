@@ -31,7 +31,7 @@ class MessageQueue
     
     private:
         MutexLock _mutex;
-        Contidion _cond;
+        Condition _cond;
         queue<Message> _Queue;
 
 };

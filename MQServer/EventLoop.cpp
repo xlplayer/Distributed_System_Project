@@ -8,9 +8,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/eventfd.h>
-#include <iostream>
-using namespace std;
 using std::bind;
+using std::make_shared;
 
 extern const int MAXFDS;
 extern int socket_bind(int port);
@@ -68,5 +67,4 @@ void EventLoop::handlewakeup()
     string msg;
     bool zero;
     int n = readn(_wakeupfd, msg, zero);
-    printf("wakeupmsg:%s\n", msg.c_str());
 }

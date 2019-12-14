@@ -18,7 +18,7 @@ MQSOURCES = $(MQDIR)/*.cpp
 CC = g++
 CFLAGS = -std=c++11 -O3 -lpthread
 
-all:
+all: producer consumer database mq
 
 producer : $(PRODUCERSOURCES)
 	$(CC) -o $(PRODUCEROBJ) $(PRODUCERSOURCES)  $(CFLAGS) -lhiredis

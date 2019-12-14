@@ -5,13 +5,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/eventfd.h>
-#include <iostream>
 #include "../rapidjson/stringbuffer.h"
 #include "../rapidjson/writer.h"
 #include "../rapidjson/document.h"
 using namespace rapidjson;
-using namespace std;
 using std::bind;
+using std::make_shared;
 
 extern const int MAXFDS;
 extern vector<sockaddr_in> queueServerAddr,databaseServerAddr;
@@ -101,7 +100,6 @@ void EventLoop::handlewakeup()
     string msg;
     bool zero;
     int n = readn(_wakeupfd, msg, zero);
-    printf("wakeupmsg:%s\n", msg.c_str());
 }
 
 void EventLoop::handleQueueRead()
@@ -109,9 +107,11 @@ void EventLoop::handleQueueRead()
     string &msg = _queueChannel->getReadmsg();
     bool zero = false;
     int nread = readn(_queuefd, msg, zero);
-    if(zero) //got EOF
+    if(zero || nread == -1) //got EOF or close force
     {
+        #ifdef DEBUG 
         printf("client closed\n");
+        #endif
         _queueChannel->setState(DISCONNTING);
     }
 
@@ -126,13 +126,13 @@ void EventLoop::handleQueueRead()
             msg.clear();
             return;
         }
-        
-        {
-            printf("read message: ");
-            for(int i=0;i<nread;i++) putchar(msg[msg.length()-nread+i]);
-            printf("\n");
-            printf("zero:%d\n",zero);
-        }
+
+        #ifdef DEBUG 
+        printf("read message: ");
+        for(int i=0;i<nread;i++) putchar(msg[msg.length()-nread+i]);
+        printf("\n");
+        printf("zero:%d\n",zero);
+        #endif
         
         string ip = d["ip"].GetString();
         int port = d["port"].GetInt();
@@ -194,15 +194,19 @@ void EventLoop::handleDatabaseRead()
     int nread = readn(_databasefd, msg, zero);
     if(nread > 0)
     {
+        #ifdef DEBUG 
         printf("read message: ");
         for(int i=0;i<nread;i++) putchar(msg[msg.length()-nread+i]);
         printf("\n");
         printf("zero:%d\n",zero);
+        #endif
     }
 
-    if(zero) //got EOF
+    if(zero || nread == -1) //got EOF or close force
     {
+        #ifdef DEBUG 
         printf("client closed\n");
+        #endif
         _databaseChannel->setState(DISCONNTING);
     }
 
@@ -223,20 +227,38 @@ void EventLoop::handleDatabaseRead()
             string operate = d["operate"].GetString();
             if(operate == "query_train")
             {
-                d["operate"].SetString("query_leftnum");
-                d.AddMember("train_num", val.Size(), d.GetAllocator());
-                d.AddMember("train","",d.GetAllocator());
-                printf("DDD");
-                for(size_t i=0; i<val.Size();i++)
+                if(val.Size() != 0)
                 {
-                    Value &v = val[i];
-                    d["train"].SetString(StringRef(v.GetString()));
-                    string &writemsg = _databaseChannel->getWritemsg();
+                    d["operate"].SetString("query_leftnum");
+                    d.AddMember("train_num", val.Size(), d.GetAllocator());
+                    d.AddMember("train","",d.GetAllocator());
+                    for(size_t i=0; i<val.Size();i++)
+                    {
+                        Value &v = val[i];
+                        d["train"].SetString(StringRef(v.GetString()));
+                        string &writemsg = _databaseChannel->getWritemsg();
+                        StringBuffer s;
+                        Writer<StringBuffer> writer(s);
+                        d.Accept(writer);
+                        writemsg += s.GetString();
+                        //trains.push_back(v.GetString());
+                    }
+                }
+                else //no trains
+                {
+                    string ip = d["ip"].GetString();
+                    int port = d["port"].GetInt();
+                    shared_ptr<Channel> channel = _addr2channel[make_pair(ip,port)];
+                    string &writemsg = channel->getWritemsg();
+                    
+                    d["operate"].SetString("reply");
+                    d.AddMember("train_num", 0, d.GetAllocator());
+                    d["result"].SetString("");
                     StringBuffer s;
                     Writer<StringBuffer> writer(s);
                     d.Accept(writer);
-                    writemsg += s.GetString();
-                    //trains.push_back(v.GetString());
+
+                    writemsg += string(s.GetString());
                 }
                 
             }
@@ -269,7 +291,9 @@ void EventLoop::handleDatabaseWrite()
     string &msg = _databaseChannel->getWritemsg();
     if(!msg.empty())
     {
+        #ifdef DEBUG 
         printf("wrigemsg: %s\n", msg.c_str());
+        #endif
         writen(_databasefd, msg);
     } 
     if(msg.size() < 1024 && !_msgQueue.empty())
@@ -292,13 +316,11 @@ void EventLoop::handleDatabaseWrite()
         string operate = d["operate"].GetString();
         if(operate == "query")
         {
-            printf("CCC\n");
             d["operate"].SetString("query_train");
             StringBuffer buffer;  
             Writer<StringBuffer> writer(buffer);  
             d.Accept(writer);
             msg += buffer.GetString();
-            printf("DDD\n");
         }
         else if(operate == "query_leftnum" || operate == "buy" || operate == "pay")
         {

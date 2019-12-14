@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +11,12 @@
 #include "../rapidjson/writer.h"
 #include "../rapidjson/document.h"
 #include <vector>
+#include <iostream>
 using namespace std;
 using namespace rapidjson;
 
-const int BUFFLEN = 1024;
+const int BUFFLEN = 102400;
+
 int main(int argc, char **argv)
 {
     if(argc != 3) 
@@ -29,7 +30,11 @@ int main(int argc, char **argv)
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(atoi(argv[2]));
     inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
-    connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr));
+    if(connect(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr)) <0)
+    {
+        perror("connect failed.");
+        return 0;
+    }
 
     string passenger_name, passenger_id;
     //cout<<"请输入姓名:";cin>>passenger_name;
@@ -61,7 +66,7 @@ int main(int argc, char **argv)
         char buf[BUFFLEN];
         int nread = read(sockfd, buf, BUFFLEN);
         string result = string(buf, buf+nread);
-
+        //cout<<result<<endl;
         Document d;
         int curlyCount = 0;
         for(int i=0;!result.empty();i++)
@@ -78,7 +83,11 @@ int main(int argc, char **argv)
             if(curlyCount == 0)
             {
                 d.Parse(result.substr(0,len+1).c_str());
-
+                if(d["train_num"].GetInt() == 0)
+                {
+                    cout<<"未找到符合条件的列车！"<<endl;
+                    return 0;
+                }
                 v.Parse(d["result"].GetString());
                 cout<<"["<<i<<"] "<<"车次:"<<v["train_number"].GetString()<<"\t\t出发站:"<<v["start"].GetString()\
                  <<"\t到达站:"<<v["end"].GetString()<<"\t剩余票数:"<<v["num"].GetUint()<<endl;
@@ -88,7 +97,6 @@ int main(int argc, char **argv)
             result = result.substr(len+1);
             continue;
         }
-
         int id;
         cout<<"请选择购买的车票(输入编号):"<<endl;cin>>id;
         cout<<"开始尝试购买..."<<endl;
@@ -107,12 +115,10 @@ int main(int argc, char **argv)
         nread = read(sockfd, buf, BUFFLEN);
         result = string(buf, buf+nread);
         d.Parse(result.c_str());
-        result = d["result"].GetString();
-        d.Parse(result.c_str());
         string status = d["result"].GetString();
         if(status == "success"){
             cout<<"购票成功，以下是购票信息:"<<endl;
-            cout<<"日期:"<<date.c_str()<<"\t车次:"<<d["train_number"].GetString()<<"\t出发站:"<<d["start"].GetString()\
+            cout<<"日期:"<<d["date"].GetString()<<"\t车次:"<<d["train_number"].GetString()<<"\t出发站:"<<d["start"].GetString()\
             <<"\t到达站:"<<d["end"].GetString()<<"\t车厢号:"<<d["compartment_number"].GetString()\
             <<"\t座位号:"<<d["seat_number"].GetString()<<endl;
 
@@ -126,16 +132,15 @@ int main(int argc, char **argv)
                 writer.StartObject();
                 writer.Key("operate");writer.String("pay");
                 writer.Key("train_number");writer.String(d["train_number"].GetString());
-                writer.Key("id");writer.Uint(d["id"].GetUint());
+                writer.Key("date");writer.String(d["date"].GetString());
+                writer.Key("id");writer.String(d["id"].GetString());
                 writer.EndObject();
                 write(sockfd, s.GetString(), s.GetSize());
                 nread = read(sockfd, buf, BUFFLEN);
                 result = string(buf, buf+nread);
-                d .Parse(result.c_str());
+                d.Parse(result.c_str());
                 string status = d["result"].GetString();
-                if(status == "success"){
-                    cout<<"支付成功！"<<endl;
-                }
+                cout<<status<<endl;
             }
             else
             {

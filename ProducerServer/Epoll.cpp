@@ -15,7 +15,9 @@ void Epoll::add_event(int fd, int state)
     struct epoll_event ev;
     ev.events = state;
     ev.data.fd = fd;
+    #ifdef DEBUG 
     printf("add fd:%d\n",fd);
+    #endif
     if(epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &ev)<0)
     {
         perror("epoll add errpr");
@@ -42,7 +44,9 @@ void Epoll::del_event(int fd, int state)
     {
         perror("epoll del error");
     } 
-    printf("del %d\n",fd);    
+    #ifdef DEBUG 
+    printf("del %d\n",fd);  
+    #endif  
 }
 
 void Epoll::add_channel(shared_ptr<Channel> channel)

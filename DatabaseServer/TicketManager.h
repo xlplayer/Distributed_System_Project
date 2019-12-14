@@ -13,7 +13,7 @@ using std::vector;
 
 struct Ticket
 {
-    Ticket():_valid(true),_mutex(){}
+    Ticket():_valid(true),_mutex(),_id("null"){}
     Ticket(string s,string e, string x):_valid(true),_mutex(),_id(x)
     {
         int start = atoi(s.c_str());

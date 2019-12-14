@@ -8,9 +8,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/eventfd.h>
-#include <iostream>
-using namespace std;
 using std::bind;
+using std::make_shared;
 
 extern const int MAXFDS;
 extern int socket_bind(int port);
@@ -40,7 +39,9 @@ void EventLoop::handleConnect()
     socklen_t clientaddr_len = sizeof(clientaddr);
     while( (clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len)) > 0)
     {
+        #ifdef DEBUG 
         printf("<new connection from %s:%d\n",inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+        #endif
         if(clientfd >= MAXFDS)
         {
             close(clientfd);
@@ -107,5 +108,4 @@ void EventLoop::handlewakeup()
     string msg;
     bool zero;
     int n = readn(_wakeupfd, msg, zero);
-    printf("wakeupmsg:%s\n", msg.c_str());
 }

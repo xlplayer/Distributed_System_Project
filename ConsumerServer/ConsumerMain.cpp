@@ -10,8 +10,6 @@
 #include <unistd.h>
 #include <memory>
 #include <vector>
-#include <iostream>
-using namespace std;
 using namespace rapidjson;
 using std::shared_ptr;
 using std::vector;
@@ -43,11 +41,7 @@ int main(int argc, char **argv)
     }
     shared_ptr<EventLoopThreadPool> _etp (new EventLoopThreadPool(threadsNum));
     _etp->start();
-    while(1);
-    // shared_ptr<EventLoop> eventLoop(new EventLoop(queueServerAddr,databaseServerAddr));
-    // eventLoop->loop();
     //while(1);
-
 }
 
 void initQueueServerAddr(vector<sockaddr_in> &queueServerAddr)
