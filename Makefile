@@ -1,36 +1,34 @@
 OBJDIR = obj
-PRODUCEROBJ = ${OBJDIR}/producer
-CONSUMEROBJ = ${OBJDIR}/consumer
-DATABASEOBJ = ${OBJDIR}/database
-MQOBJ = ${OBJDIR}/mq
+SRCDIR = src
 
-PRODUCERDIR = ProducerServer
-CONSUMERDIR = ConsumerServer
-DATABASEDIR = DatabaseServer
-MQDIR = MQServer
-
-PRODUCERSOURCES = $(PRODUCERDIR)/*.cpp
-CONSUMERSOURCES = $(CONSUMERDIR)/*.cpp
-DATABASESOURCES = $(DATABASEDIR)/*.cpp
-MQSOURCES = $(MQDIR)/*.cpp
+PRODUCERSOURCES = ${SRCDIR}/ProducerWorker/*.cpp ${SRCDIR}/base/*.cpp
+CONSUMERSOURCES = ${SRCDIR}/ConsumerWorker/*.cpp ${SRCDIR}/base/*.cpp
+DATABASESOURCES = ${SRCDIR}/DatabaseServer/*.cpp ${SRCDIR}/base/*.cpp
+MQSOURCES = ${SRCDIR}/MQServer/*.cpp ${SRCDIR}/base/*.cpp
 
 
 CC = g++
-CFLAGS = -std=c++11 -O3 -lpthread
+
+debug = false
+ifeq ($(debug), false)
+CXXFLAGS = -I ./$(SRCDIR) -std=c++11 -O3 -lpthread
+else
+CXXFLAGS = -I ./$(SRCDIR) -std=c++11 -g -D DEBUG -lpthread
+endif
 
 all: producer consumer database mq
 
 producer : $(PRODUCERSOURCES)
-	$(CC) -o $(PRODUCEROBJ) $(PRODUCERSOURCES)  $(CFLAGS) -lhiredis
+	$(CC) -o $(OBJDIR)/$@ $^  $(CXXFLAGS) -lhiredis
 
 consumer : $(CONSUMERSOURCES)
-	$(CC) -o $(CONSUMEROBJ) $(CONSUMERSOURCES)  $(CFLAGS)
+	$(CC) -o $(OBJDIR)/$@ $^  $(CXXFLAGS)
 
 database : $(DATABASESOURCES)
-	$(CC) -o $(DATABASEOBJ) $(DATABASESOURCES)  $(CFLAGS) -lmysqlclient
+	$(CC) -o $(OBJDIR)/$@ $^  $(CXXFLAGS) -lmysqlclient
 
 mq : $(MQSOURCES)
-	$(CC) -o $(MQOBJ) $(MQSOURCES) $(CFLAGS)
+	$(CC) -o $(OBJDIR)/$@ $^  $(CXXFLAGS)
 
 clean :
 	rm -f $(OBJDIR)
