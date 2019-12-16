@@ -100,7 +100,8 @@ void Channel::handleRead()
                     end = d["end"].GetString();
                     string result;
                     _database->getLeftNums(train, date, start, end, result);
-
+                    if(result == "failure") continue;
+                    
                     d.RemoveMember("result");
                     d.AddMember("result",StringRef(result.c_str()),d.GetAllocator());
                     StringBuffer s;

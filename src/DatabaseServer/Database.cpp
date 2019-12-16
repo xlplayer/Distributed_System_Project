@@ -13,8 +13,14 @@ extern map<string, vector<Ticket> > tickets;
 Database::Database()
 {
     conn = mysql_init(NULL);
-    mysql_real_connect(conn, "localhost", "root", "1234", "train", 0, NULL, 0);
-    mysql_query(conn, "set names utf8");
+    if(!mysql_real_connect(conn, "localhost", "root", "1234", "train", 0, NULL, 0)){
+        perror("数据库root:1234连接失败!\n");
+        exit(1);
+    }
+    if(mysql_query(conn, "set names utf8")){
+        perror("set utf8 failded");
+        exit(1);
+    }
 }
 
 Database::~Database()
@@ -28,39 +34,37 @@ void Database::getTrains(string &start, string &end, vector<string> &trains)
     char query[1024];
 
     sprintf(query, "select * from station_train where start = \"%s\" and end = \"%s\"", start.c_str(), end.c_str());
-   
-    int res = mysql_query(conn, query);
-    if (res) 
+    #ifdef DEBUG 
+    printf("%s\n",query);
+    #endif
+    if(mysql_query(conn, query));
 	{ 
         perror("Error： mysql_query !\n");
+        return;
     }
-    else 
-    { 
-        res_ptr = mysql_store_result(conn);
-        if (res_ptr) 
+    res_ptr = mysql_store_result(conn);
+    if (res_ptr) 
+    {
+        int column = mysql_num_fields(res_ptr);
+        int row = mysql_num_rows(res_ptr);
+        #ifdef DEBUG
+        for (int i = 0; field = mysql_fetch_field(res_ptr); i++)
+            printf("%s\t", field->name);
+        printf("\n");
+        #endif
+        for (int i = 0; i < row; i++)
         {
-            int column = mysql_num_fields(res_ptr);
-            int row = mysql_num_rows(res_ptr);
+            result_row = mysql_fetch_row(res_ptr);
             #ifdef DEBUG
-            for (int i = 0; field = mysql_fetch_field(res_ptr); i++)
-                printf("%s\t", field->name);
+            for (int j = 0; j < column; j++)
+                printf("%s\t", result_row[j]);
             printf("\n");
             #endif
-            for (int i = 0; i < row; i++)
-            {
-                result_row = mysql_fetch_row(res_ptr);
-                #ifdef DEBUG
-                for (int j = 0; j < column; j++)
-                    printf("%s\t", result_row[j]);
-                printf("\n");
-                #endif
-                trains.push_back(result_row[3]);
-            }
-
+            trains.push_back(result_row[3]);
         }
-        mysql_free_result(res_ptr);
 
     }
+    mysql_free_result(res_ptr);
 }
 
 void Database::getLeftNums(string &train, string &date, string &start, string &end, string &result)
@@ -73,7 +77,12 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
     #ifdef DEBUG 
     printf("%s\n",query);
     #endif
-    mysql_query(conn, query);
+    if(mysql_query(conn, query))
+    {
+        result = "failure";
+        perror("Error： mysql_query !\n");
+        return;
+    }
     res_ptr = mysql_store_result(conn);
     start_idx = mysql_fetch_row(res_ptr)[0];
 
@@ -81,7 +90,12 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
     #ifdef DEBUG 
     printf("%s\n",query);
     #endif
-    mysql_query(conn, query);
+    if(mysql_query(conn, query))
+    {
+        result = "failure";
+        perror("Error： mysql_query !\n");
+        return;
+    }
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
 
@@ -131,20 +145,30 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     #ifdef DEBUG 
     printf("%s\n",query);
     #endif
-    mysql_query(conn, query);
+    if(mysql_query(conn, query))
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_query !\n");
+        return;
+    }
     res_ptr = mysql_store_result(conn);
     start_idx = mysql_fetch_row(res_ptr)[0];
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train_number.c_str(), end.c_str());
     #ifdef DEBUG 
     printf("%s\n",query);
     #endif
-    mysql_query(conn, query);
+    if(mysql_query(conn, query))
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_query !\n");
+        return;
+    }
     res_ptr = mysql_store_result(conn);
     end_idx = mysql_fetch_row(res_ptr)[0];
 
 
     unsigned  bits = 0;
-    for(int i = atoi(start_idx.c_str()); i < atoi(end_idx.c_str()); i++)
+    for(unsigned i = atoi(start_idx.c_str()); i < atoi(end_idx.c_str()); i++)
         bits |= (1<<(i-1));
         
     Ticket old_ticket;
@@ -152,6 +176,7 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     int size = tik.size();
     for(int i=0;i<size;i++)
     {
+        
         Ticket &item = tik[i];
         if(item._valid && (item._bits & bits))//double check
         {

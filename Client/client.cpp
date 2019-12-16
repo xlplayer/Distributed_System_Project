@@ -7,9 +7,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "../rapidjson/stringbuffer.h"
-#include "../rapidjson/writer.h"
-#include "../rapidjson/document.h"
+#include "../src/base/rapidjson/stringbuffer.h"
+#include "../src/base/rapidjson/writer.h"
+#include "../src/base/rapidjson/document.h"
 #include <vector>
 #include <iostream>
 using namespace std;

@@ -30,7 +30,7 @@ EventLoop::~EventLoop()
 void EventLoop::loop()
 {
     _wakeupChannel = make_shared<Channel>(shared_from_this(),_wakeupfd);
-    _wakeupChannel->setEvents(EPOLLIN);
+    _wakeupChannel->setEvents(EPOLLIN );
     _wakeupChannel->setReadHandler(bind(&EventLoop::handlewakeup, this));
     _epoll->add_channel(_wakeupChannel);
 

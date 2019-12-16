@@ -78,7 +78,10 @@ int writen(int fd, string &msg)
             else if(errno == EAGAIN)
                 return sum;
             else
+            {
+                perror("read error");
                 return -1;
+            }
         }
         else if(n == 0)
         {

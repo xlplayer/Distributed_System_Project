@@ -58,13 +58,13 @@ void Channel::handleRead()
                 if(_msgQueue.size() >= 1024)
                 {
                     setWritemsg("{\"result\":\"push failure\"}");
-                    setEvents(EPOLLOUT);
+                    setEvents(EPOLLOUT );
                     update();
                 }
                 else
                 {
                     setWritemsg("{\"result\":\"push success\"}");
-                    setEvents(EPOLLIN|EPOLLOUT);
+                    setEvents(EPOLLIN | EPOLLOUT );
                     update();
                     _msgQueue.push(_readmsg);
                 }
@@ -76,13 +76,13 @@ void Channel::handleRead()
                     string str = _msgQueue.front();
                     _msgQueue.pop();
                     setWritemsg(str);
-                    setEvents(EPOLLOUT);
+                    setEvents(EPOLLOUT );
                     update();
                 }
                 else
                 {
                     setWritemsg("{\"result\":\"pop failure\"}");
-                    setEvents(EPOLLOUT);
+                    setEvents(EPOLLOUT );
                     update();
                 }
             }
@@ -101,7 +101,7 @@ void Channel::handleWrite()
             int nwrite = writen(_fd, _writemsg);
             if(_writemsg.empty())
             {
-                setEvents(EPOLLIN);
+                setEvents(EPOLLIN );
                 update();
             }
                 

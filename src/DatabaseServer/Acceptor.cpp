@@ -51,7 +51,7 @@ void Acceptor::loop()
 
         setSocketNonBlocking(clientfd);
         shared_ptr<Channel> channel(new Channel(loop, clientfd));
-        channel->setEvents(EPOLLIN|EPOLLOUT);
+        channel->setEvents(EPOLLIN | EPOLLOUT );
         loop->addPendingFunctions(bind(&Epoll::add_channel, epoll, channel));
         loop->wakeup();
         //epoll->add_channel(channel);
