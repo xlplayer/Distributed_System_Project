@@ -20,12 +20,23 @@ Thread::~Thread()
 
 struct threadData //use this to prevent new thread run after data has been release
 {
-    threadData(Condition &cond, function<void()> &func):_cond(cond),_func(func){}
+    threadData(bool *started, MutexLock &mutex, Condition &cond, function<void()> &func)
+    :_started(started),
+    _mutex(mutex),
+    _cond(cond),
+    _func(func)
+    {}
+    bool *_started;
+    MutexLock &_mutex;
     Condition &_cond;
     function<void()> &_func;
     void run()
     {
-        _cond.notifyAll();
+        {
+            MutexLockGuard lock(_mutex);
+            *_started = true;
+            _cond.notifyAll();
+        }
         _func();
     }
 };
@@ -40,9 +51,14 @@ void* Thread::threadFunc(void *arg)
 
 void Thread::start()
 {
-    threadData *data = new threadData(_cond, _cb);
+    bool started = false;
+    threadData *data = new threadData(&started, _mutex,_cond, _cb);
     pthread_create(&_tid, NULL, threadFunc, data);
-    _cond.wait();
+    {
+        MutexLockGuard lock(_mutex);
+        while(started == false)
+            _cond.wait();
+    }
     _isRunning = true;
 }
 

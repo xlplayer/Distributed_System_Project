@@ -45,14 +45,12 @@ int main(int argc, char **argv)
     {
         Document tickets[100];
         string start, end, date;
-        /*cout<<"请输入日期:";cin>>date;
+        /*cout<<"请输入日期:";cin>>date;*/
+        date = "20191201";
         cout<<"请输入购票区间"<<endl;
         cout<<"出发地:";cin>>start;
         cout<<"目的地:";cin>>end;
-        cout<<"开始查询..."<<endl;*/
-        date = "20191201";
-        start = "南京南";
-        end = "北京南";
+        cout<<"开始查询..."<<endl;
         
         StringBuffer s;
         Writer<StringBuffer> writer(s);
@@ -69,6 +67,7 @@ int main(int argc, char **argv)
         //cout<<result<<endl;
         Document d;
         int curlyCount = 0;
+        int train_num = 0;
         for(int i=0;!result.empty();i++)
         {
             Document &v = tickets[i];
@@ -88,6 +87,7 @@ int main(int argc, char **argv)
                     cout<<"未找到符合条件的列车！"<<endl;
                     return 0;
                 }
+                train_num++;
                 v.Parse(d["result"].GetString());
                 cout<<"["<<i<<"] "<<"车次:"<<v["train_number"].GetString()<<"\t\t出发站:"<<v["start"].GetString()\
                  <<"\t到达站:"<<v["end"].GetString()<<"\t剩余票数:"<<v["num"].GetUint()<<endl;
@@ -98,7 +98,14 @@ int main(int argc, char **argv)
             continue;
         }
         int id;
-        cout<<"请选择购买的车票(输入编号):"<<endl;cin>>id;
+        while(1){
+            cout<<"请选择购买的车票(输入编号):"<<endl;cin>>id;
+            if(id>=0&&id<train_num) break;
+            else{
+                cout<<"输入错误!"<<endl;
+            }
+        }
+
         cout<<"开始尝试购买..."<<endl;
         s.Clear();
         writer.Reset(s);

@@ -37,7 +37,9 @@ void Database::getTrains(string &start, string &end, vector<string> &trains)
     #ifdef DEBUG 
     printf("%s\n",query);
     #endif
-    if(mysql_query(conn, query));
+    int res = mysql_query(conn, query);
+    //printf("<<<<<<res:%d>>>>>>>\n",res);
+    if(res)
 	{ 
         perror("Error： mysql_query !\n");
         return;
@@ -160,6 +162,7 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
     if(mysql_query(conn, query))
     {
         result = "{\"result\":\"failure\"}";
+        mysql_free_result(res_ptr);
         perror("Error： mysql_query !\n");
         return;
     }

@@ -78,7 +78,7 @@ void Epoll::del_channel(shared_ptr<Channel> channel)
 
 void Epoll::handle_activate_channels()
 {
-    int num = epoll_wait(_epollfd, &*_events.begin(), _events.size(), 10000);
+    int num = (_epollfd, &*_events.begin(), _events.size(), 10000);
     for(int i=0; i<num; i++)
     {
         int fd = _events[i].data.fd;
