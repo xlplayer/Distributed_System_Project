@@ -37,17 +37,18 @@ int main(int argc, char **argv)
     }
 
     string passenger_name, passenger_id;
-    //cout<<"请输入姓名:";cin>>passenger_name;
-    //cout<<"请输入身份证号:";cin>>passenger_id;
-    passenger_name = "刘晓黎";
-    passenger_id = "123456";
+    cout<<"请输入姓名:";cin>>passenger_name;
+    cout<<"请输入身份证号:";cin>>passenger_id;
+    //passenger_name = "刘晓黎";
+    //passenger_id = "123456";
+    cout<<endl;
     while(1)
     {
         Document tickets[100];
         string start, end, date;
-        /*cout<<"请输入日期:";cin>>date;*/
-        date = "20191201";
-        cout<<"请输入购票区间"<<endl;
+        cout<<"请输入日期:";cin>>date;
+        //date = "20191201";
+        cout<<"请输入购票区间:"<<endl;
         cout<<"出发地:";cin>>start;
         cout<<"目的地:";cin>>end;
         cout<<"开始查询..."<<endl;
@@ -158,5 +159,6 @@ int main(int argc, char **argv)
         {
             cout<<"购票失败"<<endl;
         }
+        cout<<endl;
     }
 }

@@ -78,7 +78,7 @@ void Channel::handleEvents()
         handleRead();
     if(_revents & EPOLLOUT)
         handleWrite();
-
+    
     if(_state == DISCONNTING)
     {
         _state = DISCONNTED;

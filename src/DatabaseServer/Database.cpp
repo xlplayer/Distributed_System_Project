@@ -45,28 +45,27 @@ void Database::getTrains(string &start, string &end, vector<string> &trains)
         return;
     }
     res_ptr = mysql_store_result(conn);
-    if (res_ptr) 
+    if (!res_ptr) return;
+
+    int column = mysql_num_fields(res_ptr);
+    int row = mysql_num_rows(res_ptr);
+    #ifdef DEBUG
+    for (int i = 0; field = mysql_fetch_field(res_ptr); i++)
+        printf("%s\t", field->name);
+    printf("\n");
+    #endif
+    for (int i = 0; i < row; i++)
     {
-        int column = mysql_num_fields(res_ptr);
-        int row = mysql_num_rows(res_ptr);
+        result_row = mysql_fetch_row(res_ptr);
         #ifdef DEBUG
-        for (int i = 0; field = mysql_fetch_field(res_ptr); i++)
-            printf("%s\t", field->name);
+        for (int j = 0; j < column; j++)
+            printf("%s\t", result_row[j]);
         printf("\n");
         #endif
-        for (int i = 0; i < row; i++)
-        {
-            result_row = mysql_fetch_row(res_ptr);
-            #ifdef DEBUG
-            for (int j = 0; j < column; j++)
-                printf("%s\t", result_row[j]);
-            printf("\n");
-            #endif
-            trains.push_back(result_row[3]);
-        }
-
+        trains.push_back(result_row[3]);
     }
     mysql_free_result(res_ptr);
+    
 }
 
 void Database::getLeftNums(string &train, string &date, string &start, string &end, string &result)
@@ -85,9 +84,21 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
         perror("Error： mysql_query !\n");
         return;
     }
-    res_ptr = mysql_store_result(conn);
-    start_idx = mysql_fetch_row(res_ptr)[0];
 
+    res_ptr = mysql_store_result(conn);
+    if(!res_ptr)
+    {
+        result = "failure";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
+    if(!mysql_num_rows(res_ptr))
+    {
+        result = "failure";
+        perror("Error： mysql_fetch_row !\n");
+        return;
+    }
+    start_idx = mysql_fetch_row(res_ptr)[0];
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train.c_str(), end.c_str());
     #ifdef DEBUG 
     printf("%s\n",query);
@@ -99,6 +110,18 @@ void Database::getLeftNums(string &train, string &date, string &start, string &e
         return;
     }
     res_ptr = mysql_store_result(conn);
+    if(!res_ptr)
+    {
+        result = "failure";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
+    if(!mysql_num_rows(res_ptr))
+    {
+        result = "failure";
+        perror("Error： mysql_fetch_row !\n");
+        return;
+    }
     end_idx = mysql_fetch_row(res_ptr)[0];
 
     int left_num = 0;
@@ -154,6 +177,18 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         return;
     }
     res_ptr = mysql_store_result(conn);
+    if(!res_ptr)
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
+    if(!mysql_num_rows(res_ptr))
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
     start_idx = mysql_fetch_row(res_ptr)[0];
     sprintf(query, "select idx from station_idx where train = \"%s\" and station = \"%s\"", train_number.c_str(), end.c_str());
     #ifdef DEBUG 
@@ -167,6 +202,18 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
         return;
     }
     res_ptr = mysql_store_result(conn);
+    if(!res_ptr)
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
+    if(!mysql_num_rows(res_ptr))
+    {
+        result = "{\"result\":\"failure\"}";
+        perror("Error： mysql_store_result !\n");
+        return;
+    }
     end_idx = mysql_fetch_row(res_ptr)[0];
 
 
@@ -213,6 +260,16 @@ void Database::buyTicket(string &date, string &train_number, string &start, stri
             break;
         } 
         res_ptr = mysql_store_result(conn);
+        if(!res_ptr)
+        {
+            success = false;
+            break;
+        }
+        if(!mysql_num_rows(res_ptr))
+        {
+            success = false;
+            break;
+        }
         result_row = mysql_fetch_row(res_ptr);
         id = result_row[0];
         head = result_row[2];
@@ -318,8 +375,17 @@ void Database::payTicket(string &date, string &train_number, string &id, string 
             result = "付款失败!";
             break;
         }
-
         res_ptr = mysql_store_result(conn);
+        if(!res_ptr)
+        {
+            result = "付款失败!";
+            break;
+        }
+        if(!mysql_num_rows(res_ptr))
+        {
+            result = "付款失败!";
+            break;
+        }
         string status = mysql_fetch_row(res_ptr)[0];
         if(status == "unsold")
             result = "错误！该车票未被购买！";

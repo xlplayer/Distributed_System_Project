@@ -31,6 +31,8 @@ void TicketManager::update()
         result_row = mysql_fetch_row(res_ptr);
         trains.push_back(result_row[1]);
     }
+    for(int i = 0; i < row; i++) tickets[trains[i]].reserve(1000000);//初始化vector大小，防止vector自动扩容
+
     for(int i=0;i<trains.size();i++)
     {
         sprintf(query, "select * from %s where status = \"unsold\"", trains[i].c_str());

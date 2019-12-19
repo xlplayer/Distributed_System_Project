@@ -50,6 +50,7 @@ int main(int argc, char **argv)
     initServerAddr(path, queueServerAddr, databaseServerAddr);
     shared_ptr<EventLoopThreadPool> _etp (new EventLoopThreadPool(threadsNum));
     _etp->start();
+    printf("consume worker 启动成功!\n");
     //while(1);
 }
 

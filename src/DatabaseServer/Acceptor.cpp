@@ -33,6 +33,7 @@ void Acceptor::loop()
     int clientfd;
     struct sockaddr_in clientaddr;
     socklen_t clientaddr_len = sizeof(clientaddr);
+    printf("database server 启动成功！\n");
     while(1)
     {
         clientfd = accept(_listenfd, (struct sockaddr*)&clientaddr, &clientaddr_len);
